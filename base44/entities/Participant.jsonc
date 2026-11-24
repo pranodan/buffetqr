@@ -1,0 +1,128 @@
+{
+  "name": "Participant",
+  "type": "object",
+  "properties": {
+    "participant_id": {
+      "type": "string"
+    },
+    "full_name": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "institution": {
+      "type": "string"
+    },
+    "designation": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "qr_token": {
+      "type": "string"
+    },
+    "day1_eligible": {
+      "type": "boolean",
+      "default": true
+    },
+    "day2_eligible": {
+      "type": "boolean",
+      "default": true
+    },
+    "day1_redeemed": {
+      "type": "boolean",
+      "default": false
+    },
+    "day2_redeemed": {
+      "type": "boolean",
+      "default": false
+    },
+    "registration_source": {
+      "type": "string",
+      "enum": [
+        "PRE_REGISTERED",
+        "SPOT_REGISTERED",
+        "MANUALLY_ADDED"
+      ],
+      "enumColors": [
+        "blue",
+        "green",
+        "purple"
+      ]
+    },
+    "registration_timestamp": {
+      "type": "string"
+    },
+    "registered_by": {
+      "type": "string"
+    },
+    "token_status": {
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "REVOKED"
+      ],
+      "enumColors": [
+        "green",
+        "red"
+      ],
+      "default": "ACTIVE"
+    },
+    "last_modified": {
+      "type": "string"
+    },
+    "device_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "participant_id",
+    "full_name",
+    "qr_token"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        }
+      ]
+    },
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

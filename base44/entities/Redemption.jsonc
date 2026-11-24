@@ -1,0 +1,97 @@
+{
+  "name": "Redemption",
+  "type": "object",
+  "properties": {
+    "transaction_id": {
+      "type": "string"
+    },
+    "participant_id": {
+      "type": "string"
+    },
+    "participant_name": {
+      "type": "string"
+    },
+    "qr_token": {
+      "type": "string"
+    },
+    "session": {
+      "type": "string",
+      "enum": [
+        "day1",
+        "day2"
+      ],
+      "enumColors": [
+        "green",
+        "blue"
+      ]
+    },
+    "device_id": {
+      "type": "string"
+    },
+    "operator": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "SCAN",
+        "MANUAL_EXCEPTION"
+      ],
+      "enumColors": [
+        "green",
+        "yellow"
+      ]
+    },
+    "reason": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "transaction_id",
+    "participant_id",
+    "session"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        }
+      ]
+    },
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
