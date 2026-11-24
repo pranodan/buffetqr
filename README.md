@@ -23,7 +23,8 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-or-publishable-key
 
 Only the public anon/publishable key belongs in the browser app. Never use a Supabase `service_role` key in a `VITE_*` variable.
 
-Apply [`supabase/migrations/20261124000000_initial_schema.sql`](./supabase/migrations/20261124000000_initial_schema.sql) to a **new, empty Supabase database** using the Supabase SQL Editor. The migration creates the schema, indexes, helper functions, and row-level security policies.
+Apply every SQL file in [`supabase/migrations/`](./supabase/migrations/) to a **new, empty Supabase database**, in filename order, using the Supabase SQL Editor. The migrations create the schema, indexes, helper functions, and row-level security policies.
+For an existing installation, apply any newer migration files that have not already been run.
 
 Create the first admin:
 
@@ -64,6 +65,7 @@ Email confirmation and password-reset links use Supabase Auth. If Google sign-in
 
 The app's data operations are made from the browser using the public Supabase key. Row-level security is enabled for every application table; do not disable those policies to work around an authorization error.
 
+At the registration desk, scan an unused printed reserve-pass QR code before entering a participant's name. Super admins can mark an individual participant as not scanned for Day 1 or Day 2 from the participant details. They can also reset participants, redemptions, and reserve passes from Settings after re-entering their password (and completing MFA when enabled); staff, conference settings, and audit history are retained. Devices clear reset operational records the next time they sync.
 ## Architecture notes
 
 - Routes live in `src/routes/`; authenticated pages are grouped under `src/routes/_authed/`.

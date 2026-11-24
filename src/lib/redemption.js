@@ -29,6 +29,7 @@ async function commitEntry({ participant, session, actor, type, reason }) {
       participant_id: fresh.participant_id,
       participant_name: fresh.full_name,
       qr_token: fresh.qr_token,
+      scan_generation: fresh[`${session}_scan_generation`] || null,
       session,
       device_id: getDeviceId(),
       operator: actor || "",

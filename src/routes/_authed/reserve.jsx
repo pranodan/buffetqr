@@ -121,7 +121,7 @@ function ReservePage() {
     name: "Reserve buffet pass",
     id: t.token,
     category: `Batch ${t.batch || "—"}`,
-    institution: "Assign at registration desk",
+    institution: "Assigned at Registration desk",
   }));
 
   return (
@@ -254,7 +254,7 @@ function ReservePage() {
         {showSheets && sheetItems.length ? (
           <div className="mt-6 overflow-x-auto">
             <div id="reserve-sheets" className="w-[194mm] min-w-[194mm]">
-              <SlipSheets items={sheetItems} qrMap={qrMap} />
+              <SlipSheets items={sheetItems} qrMap={qrMap} showId={false} showCategory={false} />
             </div>
           </div>
         ) : null}

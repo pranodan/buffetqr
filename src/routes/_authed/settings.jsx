@@ -10,7 +10,8 @@ import { useConference } from "@/hooks/useConference";
 import { useAuth } from "@/lib/AuthContext";
 import { DEFAULT_CONFERENCE, getConference, saveConference, savePrefs } from "@/lib/settings";
 import { dbAll, dbClearAll, dbPut } from "@/lib/db";
-import { queue, runSync } from "@/lib/sync";
+import { queue, resetOperationalData, runSync } from "@/lib/sync";
+import { getSupabaseClient } from "@/api/supabaseClient";
 import { getDeviceId, getDeviceName, setDeviceName } from "@/lib/device";
 import { recordAudit } from "@/lib/audit";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,11 @@ function SettingsPage() {
   const [newStaff, setNewStaff] = useState({ email: "", display_name: "", role: "registration" });
   const [deviceName, setDeviceNameState] = useState("");
   const [busy, setBusy] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetConfirmation, setResetConfirmation] = useState("");
+  const [resetMfa, setResetMfa] = useState(null);
+  const [resetMfaCode, setResetMfaCode] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -96,6 +102,94 @@ function SettingsPage() {
     if (!window.confirm("Erase all data stored on this phone? Unsynced changes will be lost.")) return;
     await dbClearAll();
     window.location.reload();
+  };
+
+  const finishOperationalReset = async () => {
+    const result = await resetOperationalData();
+    setResetMfa(null);
+    setResetMfaCode("");
+    setResetPassword("");
+    setResetConfirmation("");
+    setMessage(
+      `Deleted ${result.participants} participants, ${result.redemptions} redemptions, and ${result.reserve_tokens} reserve passes.`
+    );
+  };
+
+  const confirmOperationalReset = async (e) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+    if (resetConfirmation !== "RESET") {
+      setError('Type "RESET" to confirm this action.');
+      return;
+    }
+    if (!user?.email || !resetPassword) {
+      setError("Enter your current account password.");
+      return;
+    }
+    setResetBusy(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { error: passwordError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: resetPassword,
+      });
+      if (passwordError) throw passwordError;
+      setResetPassword("");
+
+      const { data: assurance, error: assuranceError } =
+        await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (assuranceError) throw assuranceError;
+      if (assurance.currentLevel !== "aal2" && assurance.nextLevel === "aal2") {
+        const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+        if (factorsError) throw factorsError;
+        const factor = [...factors.totp, ...factors.phone].find((item) => item.status === "verified");
+        if (!factor) throw new Error("A second authentication factor is required but none is available.");
+        const params = { factorId: factor.id };
+        if (factor.factor_type === "phone") params.channel = "sms";
+        const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge(params);
+        if (challengeError) throw challengeError;
+        setResetMfa({
+          factorId: factor.id,
+          challengeId: challenge.id,
+          factorType: factor.factor_type,
+          phone: factor.phone,
+        });
+        return;
+      }
+      await finishOperationalReset();
+    } catch (err) {
+      setError(String(err?.message || err));
+    } finally {
+      setResetBusy(false);
+    }
+  };
+
+  const verifyResetMfa = async (e) => {
+    e.preventDefault();
+    if (!resetMfa || resetMfaCode.length !== 6) return;
+    setError("");
+    setResetBusy(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { error: verifyError } = await supabase.auth.mfa.verify({
+        factorId: resetMfa.factorId,
+        challengeId: resetMfa.challengeId,
+        code: resetMfaCode,
+      });
+      if (verifyError) throw verifyError;
+      const { data: assurance, error: assuranceError } =
+        await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (assuranceError) throw assuranceError;
+      if (assurance.currentLevel !== "aal2") throw new Error("Multi-factor verification did not complete.");
+      setResetMfa(null);
+      await finishOperationalReset();
+    } catch (err) {
+      setError(String(err?.message || err));
+      setResetMfaCode("");
+    } finally {
+      setResetBusy(false);
+    }
   };
 
   if (loading || !ready || !form) {
@@ -309,6 +403,71 @@ function SettingsPage() {
             Add the email and role before the person registers. They can sign up with that email and confirm it;
             Supabase row-level security enforces their access.
           </p>
+        </section>
+
+        <section className="rounded-2xl border border-border/70 bg-card p-4">
+          <p className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-destructive">
+            <Trash2 className="h-3.5 w-3.5" /> Reset conference records
+          </p>
+          <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+            Permanently deletes all participants, buffet redemptions, and reserve passes from the shared database
+            and this phone. Staff, conference settings, devices, and audit history are retained. Other phones clear
+            these records when they next sync.
+          </p>
+          {resetMfa ? (
+            <form onSubmit={verifyResetMfa} className="mt-3 space-y-2">
+              <p className="text-xs">
+                {resetMfa.factorType === "phone"
+                  ? `Enter the verification code sent to ${resetMfa.phone || "your phone"}.`
+                  : "Enter the code from your authenticator app."}
+              </p>
+              <Labeled label="6-digit verification code">
+                <input
+                  value={resetMfaCode}
+                  onChange={(e) => setResetMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
+                />
+              </Labeled>
+              <button
+                type="submit"
+                disabled={resetBusy || resetMfaCode.length !== 6}
+                className="inline-flex items-center gap-2 rounded-xl bg-destructive px-3.5 py-2.5 text-xs font-medium text-destructive-foreground disabled:opacity-60"
+              >
+                {resetBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                Verify and delete records
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={confirmOperationalReset} className="mt-3 grid gap-3 sm:grid-cols-2">
+              <Labeled label='Type "RESET" to confirm'>
+                <input
+                  value={resetConfirmation}
+                  onChange={(e) => setResetConfirmation(e.target.value)}
+                  autoComplete="off"
+                  className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
+                />
+              </Labeled>
+              <Labeled label="Current super admin password">
+                <input
+                  type="password"
+                  value={resetPassword}
+                  onChange={(e) => setResetPassword(e.target.value)}
+                  autoComplete="current-password"
+                  className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
+                />
+              </Labeled>
+              <button
+                type="submit"
+                disabled={resetBusy || resetConfirmation !== "RESET" || !resetPassword}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-destructive px-3.5 py-2.5 text-xs font-medium text-destructive-foreground disabled:opacity-60 sm:col-span-2 sm:justify-self-start"
+              >
+                {resetBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                {resetBusy ? "Confirming…" : "Verify password and delete records"}
+              </button>
+            </form>
+          )}
         </section>
 
         <section className="rounded-2xl border border-border/70 bg-card p-4">

@@ -1,4 +1,4 @@
-import { dbAll, dbDelete, dbGet, dbPut } from "@/lib/db";
+import { dbAll, dbDelete, dbGet, dbPut, dbTransaction } from "@/lib/db";
 import { getDeviceId } from "@/lib/device";
 import { newParticipantId, secureToken } from "@/lib/tokens";
 import { queue } from "@/lib/sync";
@@ -49,6 +49,10 @@ async function uniqueParticipantId(prefix) {
 export async function createParticipant(input, { actor, source = "SPOT_REGISTERED" } = {}) {
   const now = new Date().toISOString();
   const participantId = input.participant_id || (await uniqueParticipantId(source === "MANUALLY_ADDED" ? "MN" : "SP"));
+  const reserveToken = input.qr_token ? await dbGet("tokens", String(input.qr_token).trim().toLowerCase()) : null;
+  if (input.qr_token && reserveToken?.status !== "UNUSED") {
+    throw new Error("That reserve pass is no longer available. Scan an unused pass and try again.");
+  }
   const record = {
     participant_id: participantId,
     full_name: String(input.full_name || "").trim(),
@@ -57,7 +61,7 @@ export async function createParticipant(input, { actor, source = "SPOT_REGISTERE
     designation: input.designation || "",
     email: input.email || "",
     phone: input.phone || "",
-    qr_token: input.qr_token || secureToken(),
+    qr_token: reserveToken?.token || secureToken(),
     day1_eligible: input.day1_eligible !== false,
     day2_eligible: input.day2_eligible !== false,
     day1_redeemed: false,
@@ -73,8 +77,28 @@ export async function createParticipant(input, { actor, source = "SPOT_REGISTERE
     sync_state: "PENDING",
     cloud_id: null,
   };
-  await dbPut("participants", record);
+  let assignedToken = null;
+  if (reserveToken) {
+    assignedToken = {
+      ...reserveToken,
+      status: "ASSIGNED",
+      assigned_participant_id: participantId,
+      assigned_at: now,
+      assigned_by: actor || "",
+    };
+    await dbTransaction(["participants", "tokens"], "readwrite", async (tx) => {
+      const currentToken = await tx.get("tokens", reserveToken.token);
+      if (!currentToken || currentToken.status !== "UNUSED") {
+        throw new Error("That reserve pass was just assigned elsewhere. Scan an unused pass and try again.");
+      }
+      await tx.put("participants", record);
+      await tx.put("tokens", assignedToken);
+    });
+  } else {
+    await dbPut("participants", record);
+  }
   await queue("participant", record, { sync: true });
+  if (assignedToken) await queue("token", assignedToken, { sync: true });
   await recordAudit({
     event_type: source === "MANUALLY_ADDED" ? "PARTICIPANT_ADDED" : "SPOT_REGISTRATION",
     participant_id: record.participant_id,
@@ -82,6 +106,15 @@ export async function createParticipant(input, { actor, source = "SPOT_REGISTERE
     outcome: "SUCCESS",
     detail: record.full_name,
   });
+  if (assignedToken) {
+    await recordAudit({
+      event_type: "RESERVE_TOKEN_ASSIGNED",
+      participant_id: participantId,
+      actor,
+      outcome: "SUCCESS",
+      detail: assignedToken.token,
+    });
+  }
   return record;
 }
 
@@ -146,6 +179,49 @@ export async function revokeToken(id, actor, reason) {
     detail: existing.qr_token,
   });
   return next;
+}
+
+export async function resetParticipantScan(id, session, actor) {
+  if (!["day1", "day2"].includes(session)) throw new Error("Invalid buffet session");
+  const timestamp = new Date().toISOString();
+  const generation = crypto.randomUUID();
+  const dedupeKey = `${id}::${session}`;
+  let updated;
+
+  await dbTransaction(["participants", "redemptions"], "readwrite", async (tx) => {
+    const existing = await tx.get("participants", id);
+    if (!existing) throw new Error("Participant not found");
+    updated = {
+      ...existing,
+      [`${session}_redeemed`]: false,
+      [`${session}_redeemed_at`]: "",
+      [`${session}_scan_reset_at`]: timestamp,
+      [`${session}_scan_generation`]: generation,
+      last_modified: timestamp,
+      sync_state: "PENDING",
+    };
+    await tx.put("participants", updated);
+    await tx.delete("redemptions", dedupeKey);
+  });
+
+  await queue("redemption_reset", {
+    participant_id: id,
+    session,
+    scan_generation: generation,
+    actor: actor || "",
+    timestamp,
+  }, { sync: true });
+  await recordAudit({
+    event_type: "SCAN_RESET",
+    participant_id: id,
+    actor,
+    session,
+    outcome: "SUCCESS",
+    reason: "Scanned state reset by super admin",
+    detail: "Participant marked not scanned",
+    timestamp,
+  });
+  return updated;
 }
 
 export async function deleteParticipant(id, actor) {

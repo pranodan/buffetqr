@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Printer, RefreshCw, Trash2, Ban, ShieldCheck, X } from "lucide-react";
+import { Search, Printer, RefreshCw, Trash2, Ban, ShieldCheck, X, RotateCcw } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import NoAccess from "@/components/NoAccess";
 import PageLoading from "@/components/PageLoading";
@@ -9,7 +9,7 @@ import SyncBadge from "@/components/SyncBadge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAppSession } from "@/hooks/useAppSession";
 import { useConference } from "@/hooks/useConference";
-import { allParticipants, deleteParticipant, replaceToken, revokeToken, updateParticipant } from "@/lib/participants";
+import { allParticipants, deleteParticipant, replaceToken, resetParticipantScan, revokeToken, updateParticipant } from "@/lib/participants";
 import { qrDataUrl } from "@/lib/qr";
 import { printSingleSlip } from "@/lib/slipPrint";
 import { formatNPT } from "@/lib/format";
@@ -39,6 +39,7 @@ function ParticipantsPage() {
   const [selected, setSelected] = useState(null);
   const [qr, setQr] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
   const [limit, setLimit] = useState(40);
 
@@ -80,9 +81,12 @@ function ParticipantsPage() {
 
   const act = async (fn) => {
     setBusy(true);
+    setActionError("");
     try {
       await fn();
       await refresh(selected?.participant_id);
+    } catch (err) {
+      setActionError(String(err?.message || err));
     } finally {
       setBusy(false);
     }
@@ -200,6 +204,8 @@ function ParticipantsPage() {
                 </span>
               </div>
 
+              {actionError ? <p role="alert" className="mt-3 rounded-xl bg-destructive/8 px-3 py-2 text-xs text-destructive">{actionError}</p> : null}
+
               <div className="mt-4 flex gap-4">
                 {qr ? (
                   <img
@@ -233,6 +239,10 @@ function ParticipantsPage() {
                       )
                     )
                   }
+                  onResetScan={role === "admin" ? () => {
+                    if (!window.confirm(`Mark ${selected.full_name} as not scanned for Day 1?`)) return;
+                    act(() => resetParticipantScan(selected.participant_id, "day1", actor));
+                  } : null}
                 />
                 <EligibilityRow
                   label="Day 2"
@@ -249,6 +259,10 @@ function ParticipantsPage() {
                       )
                     )
                   }
+                  onResetScan={role === "admin" ? () => {
+                    if (!window.confirm(`Mark ${selected.full_name} as not scanned for Day 2?`)) return;
+                    act(() => resetParticipantScan(selected.participant_id, "day2", actor));
+                  } : null}
                 />
               </div>
 
@@ -328,7 +342,7 @@ function DayPip({ label, on, done }) {
   );
 }
 
-function EligibilityRow({ label, eligible, redeemed, redeemedAt, onToggle, disabled }) {
+function EligibilityRow({ label, eligible, redeemed, redeemedAt, onToggle, onResetScan, disabled }) {
   return (
     <div className="rounded-xl border border-border/70 px-3 py-2.5">
       <div className="flex items-center justify-between">
@@ -348,6 +362,15 @@ function EligibilityRow({ label, eligible, redeemed, redeemedAt, onToggle, disab
       <p className="mt-1.5 text-[11px] text-muted-foreground">
         {redeemed ? `Redeemed ${formatNPT(redeemedAt)}` : "Not redeemed"}
       </p>
+      {redeemed && onResetScan ? (
+        <button
+          onClick={onResetScan}
+          disabled={disabled}
+          className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-destructive disabled:opacity-50"
+        >
+          <RotateCcw className="h-3 w-3" /> Mark not scanned
+        </button>
+      ) : null}
     </div>
   );
 }

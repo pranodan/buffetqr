@@ -243,7 +243,7 @@ function SlipsPage() {
 
         <div className="mt-6 overflow-x-auto">
           <div ref={sheetsRef} className={cn("w-[194mm] min-w-[194mm]", !items.length && "hidden")}>
-            <SlipSheets items={items} qrMap={qrMap} />
+            <SlipSheets items={items} qrMap={qrMap} showId={false} showCategory={false} />
           </div>
         </div>
 

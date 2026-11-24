@@ -106,10 +106,6 @@ async function pushOne(item) {
         qr_token: p.qr_token,
         day1_eligible: !!p.day1_eligible,
         day2_eligible: !!p.day2_eligible,
-        day1_redeemed: !!p.day1_redeemed,
-        day2_redeemed: !!p.day2_redeemed,
-        day1_redeemed_at: p.day1_redeemed_at || null,
-        day2_redeemed_at: p.day2_redeemed_at || null,
         registration_source: p.registration_source || "PRE_REGISTERED",
         registration_timestamp: p.registration_timestamp || new Date().toISOString(),
         registered_by: p.registered_by || "",
@@ -135,6 +131,7 @@ async function pushOne(item) {
         participant_id: p.participant_id,
         participant_name: p.participant_name || "",
         qr_token: p.qr_token || "",
+        scan_generation: p.scan_generation || null,
         session: p.session,
         device_id: p.device_id || getDeviceId(),
         operator: p.operator || "",
@@ -144,6 +141,15 @@ async function pushOne(item) {
       });
       const local = await dbGet("redemptions", p.dedupe_key);
       if (local) await dbPut("redemptions", { ...local, synced: true });
+      return;
+    }
+    case "redemption_reset": {
+      const { error } = await getSupabaseClient().rpc("reset_participant_scan", {
+        p_participant_id: p.participant_id,
+        p_session: p.session,
+        p_generation: p.scan_generation,
+      });
+      if (error) throw error;
       return;
     }
     case "audit": {
@@ -164,6 +170,14 @@ async function pushOne(item) {
       return;
     }
     case "token": {
+      if (p.status === "ASSIGNED") {
+        const { error } = await getSupabaseClient().rpc("assign_reserve_token", {
+          p_token: p.token,
+          p_participant_id: p.assigned_participant_id,
+        });
+        if (error) throw error;
+        return;
+      }
       const data = {
         token: p.token,
         status: p.status,
@@ -226,6 +240,10 @@ function mapCloudParticipant(c) {
     day2_redeemed: !!c.day2_redeemed,
     day1_redeemed_at: c.day1_redeemed_at || "",
     day2_redeemed_at: c.day2_redeemed_at || "",
+    day1_scan_reset_at: c.day1_scan_reset_at || "",
+    day2_scan_reset_at: c.day2_scan_reset_at || "",
+    day1_scan_generation: c.day1_scan_generation || "",
+    day2_scan_generation: c.day2_scan_generation || "",
     registration_source: c.registration_source || "PRE_REGISTERED",
     registration_timestamp: c.registration_timestamp || c.created_at || "",
     registered_by: c.registered_by || "",
@@ -246,11 +264,38 @@ async function pullAll() {
     listAll("devices"),
   ]);
 
+  const cloudParticipantsById = new Map(cloudParticipants.map((participant) => [participant.participant_id, participant]));
+  const initialOutbox = await dbAll("outbox");
+  const pendingResetKeys = new Set(
+    initialOutbox
+      .filter((item) => item.kind === "redemption_reset")
+      .map((item) => `${item.payload?.participant_id}::${item.payload?.session}`)
+  );
+  for (const item of initialOutbox) {
+    if (item.kind !== "redemption") continue;
+    const key = `${item.payload?.participant_id}::${item.payload?.session}`;
+    if (pendingResetKeys.has(key)) continue;
+    const remoteParticipant = cloudParticipantsById.get(item.payload?.participant_id);
+    const generation = remoteParticipant?.[`${item.payload?.session}_scan_generation`] || null;
+    if (remoteParticipant && generation !== (item.payload?.scan_generation || null)) {
+      await dbDelete("outbox", item.id);
+      if (item.payload?.dedupe_key) await dbDelete("redemptions", item.payload.dedupe_key);
+    }
+  }
   const outbox = await dbAll("outbox");
   const pendingParticipants = new Set(
     outbox.filter((i) => i.kind === "participant").map((i) => i.payload?.participant_id)
   );
+  const pendingRedemptions = new Set(
+    outbox.filter((i) => i.kind === "redemption").map((i) => i.payload?.dedupe_key)
+  );
+  const pendingRedemptionResets = new Set(
+    outbox
+      .filter((i) => i.kind === "redemption_reset")
+      .map((i) => `${i.payload?.participant_id}::${i.payload?.session}`)
+  );
   const pendingSettings = new Set(outbox.filter((i) => i.kind === "setting").map((i) => i.payload?.key));
+  const cloudRedemptionKeys = new Set(cloudRedemptions.map((r) => `${r.participant_id}::${r.session}`));
 
   for (const c of cloudParticipants) {
     if (!c.participant_id || !c.qr_token) continue;
@@ -264,10 +309,40 @@ async function pullAll() {
     const remoteNewer = new Date(remote.last_modified || 0) > new Date(local.last_modified || 0);
     const merged = !keepLocal && remoteNewer ? { ...local, ...remote } : { ...remote, ...local };
     merged.cloud_id = c.participant_id;
-    merged.day1_redeemed = !!(local.day1_redeemed || remote.day1_redeemed);
-    merged.day2_redeemed = !!(local.day2_redeemed || remote.day2_redeemed);
-    merged.day1_redeemed_at = local.day1_redeemed_at || remote.day1_redeemed_at || "";
-    merged.day2_redeemed_at = local.day2_redeemed_at || remote.day2_redeemed_at || "";
+    const day1Key = `${c.participant_id}::day1`;
+    const day2Key = `${c.participant_id}::day2`;
+    merged.day1_redeemed = pendingRedemptionResets.has(day1Key)
+      ? false
+      : pendingRedemptions.has(day1Key)
+        ? !!local.day1_redeemed
+        : !!remote.day1_redeemed;
+    merged.day2_redeemed = pendingRedemptionResets.has(day2Key)
+      ? false
+      : pendingRedemptions.has(day2Key)
+        ? !!local.day2_redeemed
+        : !!remote.day2_redeemed;
+    merged.day1_redeemed_at = pendingRedemptionResets.has(day1Key)
+      ? ""
+      : pendingRedemptions.has(day1Key)
+        ? local.day1_redeemed_at || ""
+        : remote.day1_redeemed_at || "";
+    merged.day2_redeemed_at = pendingRedemptionResets.has(day2Key)
+      ? ""
+      : pendingRedemptions.has(day2Key)
+        ? local.day2_redeemed_at || ""
+        : remote.day2_redeemed_at || "";
+    merged.day1_scan_generation = pendingRedemptionResets.has(day1Key)
+      ? local.day1_scan_generation || ""
+      : remote.day1_scan_generation;
+    merged.day2_scan_generation = pendingRedemptionResets.has(day2Key)
+      ? local.day2_scan_generation || ""
+      : remote.day2_scan_generation;
+    merged.day1_scan_reset_at = pendingRedemptionResets.has(day1Key)
+      ? local.day1_scan_reset_at || ""
+      : remote.day1_scan_reset_at;
+    merged.day2_scan_reset_at = pendingRedemptionResets.has(day2Key)
+      ? local.day2_scan_reset_at || ""
+      : remote.day2_scan_reset_at;
     merged.qr_token = local.qr_token || remote.qr_token;
     if (local.token_status === "REVOKED" || remote.token_status === "REVOKED") {
       merged.token_status = "REVOKED";
@@ -279,6 +354,7 @@ async function pullAll() {
   for (const r of cloudRedemptions) {
     if (!r.participant_id || !r.session) continue;
     const key = `${r.participant_id}::${r.session}`;
+    if (pendingRedemptionResets.has(key)) continue;
     const local = await dbGet("redemptions", key);
     if (!local) {
       await dbPut("redemptions", {
@@ -303,6 +379,13 @@ async function pullAll() {
         [`${r.session}_redeemed`]: true,
         [`${r.session}_redeemed_at`]: r.timestamp || r.created_at,
       });
+    }
+  }
+
+  for (const redemption of await dbAll("redemptions")) {
+    const key = `${redemption.participant_id}::${redemption.session}`;
+    if (redemption.synced && !cloudRedemptionKeys.has(key) && !pendingRedemptions.has(key)) {
+      await dbDelete("redemptions", redemption.dedupe_key);
     }
   }
 
@@ -376,8 +459,67 @@ async function heartbeat() {
 }
 
 let inFlight = null;
+let syncPaused = false;
+
+const OPERATIONAL_OUTBOX_KINDS = new Set(["participant", "redemption", "redemption_reset", "token"]);
+
+async function clearLocalOperationalData(resetAt) {
+  await Promise.all([dbClear("participants"), dbClear("redemptions"), dbClear("tokens")]);
+  const outbox = await dbAll("outbox");
+  await Promise.all(
+    outbox
+      .filter((item) => OPERATIONAL_OUTBOX_KINDS.has(item.kind))
+      .map((item) => dbDelete("outbox", item.id))
+  );
+  await setMeta("operationalResetAt", resetAt);
+  await refreshPending();
+}
+
+async function applyRemoteOperationalReset() {
+  const { data, error } = await getSupabaseClient()
+    .from("app_settings")
+    .select("value")
+    .eq("key", "operational_reset_at")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data?.value) return;
+
+  const remoteTime = Date.parse(data.value);
+  const localTime = Date.parse(await getMeta("operationalResetAt", ""));
+  if (Number.isFinite(remoteTime) && (!Number.isFinite(localTime) || remoteTime > localTime)) {
+    await clearLocalOperationalData(data.value);
+  }
+}
+
+export async function resetOperationalData() {
+  syncPaused = true;
+  try {
+    if (inFlight) await inFlight;
+    const { data, error } = await getSupabaseClient().rpc("reset_operational_data");
+    if (error) throw error;
+    if (!data?.reset_at || !data?.event_id) throw new Error("The server did not confirm the data reset.");
+    await clearLocalOperationalData(data.reset_at);
+    await dbPut("audits", {
+      event_id: data.event_id,
+      event_type: "OPERATIONAL_DATA_RESET",
+      participant_id: "",
+      device_id: getDeviceId(),
+      actor: data.actor || "",
+      timestamp: data.reset_at,
+      session: "",
+      outcome: "SUCCESS",
+      reason: "",
+      detail: `Deleted ${data.participants} participants, ${data.redemptions} redemptions, and ${data.reserve_tokens} reserve passes`,
+      synced: true,
+    });
+    return data;
+  } finally {
+    syncPaused = false;
+  }
+}
 
 export async function runSync(reason = "manual") {
+  if (syncPaused) return state;
   if (inFlight) return inFlight;
   if (typeof navigator !== "undefined" && !navigator.onLine) {
     setState({ online: false, error: "This phone is offline. Work continues locally." });
@@ -386,6 +528,7 @@ export async function runSync(reason = "manual") {
   inFlight = (async () => {
     setState({ running: true, online: true, error: null, phase: "push" });
     try {
+      await applyRemoteOperationalReset();
       await pushOutbox();
       setState({ phase: "pull" });
       await pullAll();

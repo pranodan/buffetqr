@@ -1,22 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { UserPlus, Printer, Download, CheckCircle2, AlertTriangle, Loader2, ArrowRight } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { UserPlus, CheckCircle2, AlertTriangle, Loader2, ArrowRight, Camera, Keyboard, Ticket } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import NoAccess from "@/components/NoAccess";
 import PageLoading from "@/components/PageLoading";
 import PageHeader from "@/components/PageHeader";
 import SyncBadge from "@/components/SyncBadge";
+import ScanCamera from "@/components/scanner/ScanCamera";
 import { useAppSession } from "@/hooks/useAppSession";
 import { useConference } from "@/hooks/useConference";
 import { useSyncStatus } from "@/hooks/useSyncStatus";
 import { createParticipant, getParticipant, similarParticipants } from "@/lib/participants";
-import { assignReserveToken, unusedTokens } from "@/lib/reserve";
-import { availabilityFor } from "@/lib/sync";
+import { dbGet } from "@/lib/db";
+import { availabilityFor, refreshPending } from "@/lib/sync";
 import { qrDataUrl } from "@/lib/qr";
-import { printSingleSlip } from "@/lib/slipPrint";
-import { downloadSlipPdf } from "@/lib/pdf";
-import { refreshPending } from "@/lib/sync";
 import { getDeviceId } from "@/lib/device";
+import { isWellFormedToken } from "@/lib/tokens";
 
 export const Route = createFileRoute("/_authed/spot")({
   head: () => ({ meta: [{ title: "Spot registration · Buffet Access" }] }),
@@ -56,14 +55,8 @@ function RegisterPage() {
   const [error, setError] = useState("");
   const [created, setCreated] = useState(null);
   const [qr, setQr] = useState(null);
-  const [reserveTokens, setReserveTokens] = useState([]);
-  const [useReserve, setUseReserve] = useState(false);
-  const [pdfBusy, setPdfBusy] = useState(false);
-  const slipRef = useRef(null);
-
-  useEffect(() => {
-    unusedTokens().then(setReserveTokens);
-  }, []);
+  const [scannedToken, setScannedToken] = useState(null);
+  const [manualToken, setManualToken] = useState("");
 
   useEffect(() => {
     const name = form.full_name.trim();
@@ -99,33 +92,49 @@ function RegisterPage() {
   const reset = () => {
     setCreated(null);
     setQr(null);
+    setScannedToken(null);
+    setManualToken("");
     setForm({ full_name: "", category: "Participant", institution: "", designation: "", email: "", phone: "" });
     setMatches([]);
     setConfirmed(false);
     setError("");
-    unusedTokens().then(setReserveTokens);
+  };
+
+  const handlePassCode = async (raw) => {
+    setError("");
+    const token = String(raw || "").trim().toLowerCase();
+    if (!isWellFormedToken(token)) {
+      setError("That is not a valid reserve-pass QR code.");
+      return;
+    }
+    try {
+      const reserve = await dbGet("tokens", token);
+      if (!reserve) throw new Error("Reserve pass not found on this phone. Sync the reserve-pass list and try again.");
+      if (reserve.status !== "UNUSED") throw new Error("That reserve pass has already been assigned or revoked.");
+      setScannedToken(reserve);
+      setManualToken("");
+    } catch (err) {
+      setError(String(err?.message || err));
+    }
   };
 
   const submit = async (e) => {
     e?.preventDefault();
     setError("");
+    if (!scannedToken) {
+      setError("Scan an unused printed reserve pass first.");
+      return;
+    }
     if (!form.full_name.trim()) {
       setError("Enter the participant's full name.");
       return;
     }
     setBusy(true);
     try {
-      let token = null;
-      if (useReserve) {
-        const available = await unusedTokens();
-        if (!available.length) throw new Error("No unused reserve passes left. Register without one.");
-        token = available[0].token;
-      }
       const record = await createParticipant(
-        { ...form, qr_token: token || undefined },
+        { ...form, qr_token: scannedToken.token },
         { actor, source: "SPOT_REGISTERED" }
       );
-      if (token) await assignReserveToken(token, record.participant_id, actor);
       const image = await qrDataUrl(record.qr_token, 480);
       setQr(image);
       setCreated(record);
@@ -135,16 +144,6 @@ function RegisterPage() {
       setError(String(err?.message || err));
     } finally {
       setBusy(false);
-    }
-  };
-
-  const downloadPdf = async () => {
-    if (!slipRef.current) return;
-    setPdfBusy(true);
-    try {
-      await downloadSlipPdf(slipRef.current, `${created?.participant_id || "slip"}.pdf`);
-    } finally {
-      setPdfBusy(false);
     }
   };
 
@@ -169,7 +168,7 @@ function RegisterPage() {
         <PageHeader
           eyebrow={conference.name}
           title="Spot registration"
-          description="Name alone is enough. A unique ID and pass are created automatically."
+          description="Scan a printed reserve pass, then register the walk-in using their name."
           actions={<SyncBadge state={availability || "PENDING"} />}
         />
 
@@ -195,6 +194,9 @@ function RegisterPage() {
                     {created.category}
                     {created.institution ? ` · ${created.institution}` : ""}
                   </p>
+                  <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-success">
+                    <Ticket className="h-3.5 w-3.5" /> Printed reserve pass assigned
+                  </p>
                   <div className="mt-3">
                     <SyncBadge state={availability} />
                   </div>
@@ -209,55 +211,64 @@ function RegisterPage() {
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
-                  onClick={() =>
-                    printSingleSlip({
-                      name: created.full_name,
-                      id: created.participant_id,
-                      category: created.category,
-                      institution: created.institution,
-                      qr,
-                    })
-                  }
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground"
-                >
-                  <Printer className="h-4 w-4" /> Print slip
-                </button>
-                <button
-                  onClick={downloadPdf}
-                  disabled={pdfBusy}
-                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium disabled:opacity-60"
-                >
-                  {pdfBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} PDF
-                </button>
-                <button
                   onClick={reset}
-                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium"
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground"
                 >
                   <UserPlus className="h-4 w-4" /> Next person
                 </button>
               </div>
             </div>
-
-            {/* Hidden sheet used for the PDF export */}
-            <div className="pointer-events-none fixed -left-[2000px] top-0" aria-hidden="true">
-              <div ref={slipRef}>
-                <div className="slip-page">
-                  <div className="slip">
-                    <div className="slip-qr">{qr ? <img src={qr} alt="" /> : null}</div>
-                    <div className="min-w-0 flex-1">
-                      <div className="slip-name">{created.full_name}</div>
-                      <div className="slip-id">{created.participant_id}</div>
-                      <div className="slip-meta">{created.category}</div>
-                      {created.institution ? <div className="slip-meta">{created.institution}</div> : null}
-                    </div>
-                  </div>
-                </div>
-              </div>
+          </div>
+        ) : !scannedToken ? (
+          <div className="space-y-3">
+            <div className="rounded-3xl border border-border/70 bg-card p-4">
+              <p className="mb-3 inline-flex items-center gap-2 text-sm font-medium">
+                <Camera className="h-4 w-4 text-primary" /> Scan an unused printed reserve pass
+              </p>
+              <ScanCamera enabled={!busy} onDecoded={handlePassCode} onError={() => setError("Camera unavailable. Enter the printed pass code below.")} />
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handlePassCode(manualToken);
+                }}
+                className="mt-3 flex gap-2"
+              >
+                <label className="sr-only" htmlFor="reserve-pass-code">Reserve pass code</label>
+                <input
+                  id="reserve-pass-code"
+                  value={manualToken}
+                  onChange={(e) => setManualToken(e.target.value)}
+                  placeholder="Or enter the 32-character pass code"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  className="mono min-w-0 flex-1 rounded-xl border border-input bg-background px-3 py-2.5 text-xs outline-none focus:border-primary"
+                />
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2.5 text-xs font-medium text-primary-foreground"
+                >
+                  <Keyboard className="h-3.5 w-3.5" /> Use pass
+                </button>
+              </form>
+              {error ? <p role="alert" className="mt-3 rounded-xl bg-destructive/8 px-3 py-2 text-xs text-destructive">{error}</p> : null}
             </div>
+            <p className="px-1 text-[11px] leading-relaxed text-muted-foreground">
+              The pass is checked against the synced reserve list. Already assigned or revoked passes cannot be used.
+            </p>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-3">
             <div className="rounded-3xl border border-border/70 bg-card p-4">
+              <div className="mb-4 flex items-center justify-between gap-3 rounded-xl bg-muted/60 px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Scanned pass</p>
+                  <p className="mono truncate text-xs">{scannedToken.token}</p>
+                </div>
+                <button type="button" onClick={reset} className="shrink-0 text-[11px] font-medium text-primary">
+                  Scan another
+                </button>
+              </div>
               <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Full name
               </label>
@@ -346,23 +357,8 @@ function RegisterPage() {
                 </div>
               </details>
 
-              {reserveTokens.length ? (
-                <label className="mt-4 flex items-start gap-2.5 rounded-xl bg-muted/60 px-3 py-2.5">
-                  <input
-                    type="checkbox"
-                    checked={useReserve}
-                    onChange={(e) => setUseReserve(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 accent-[hsl(var(--primary))]"
-                  />
-                  <span className="text-[12px] leading-relaxed text-muted-foreground">
-                    Use a pre-printed reserve pass ({reserveTokens.length} unused). It becomes linked to this
-                    person permanently.
-                  </span>
-                </label>
-              ) : null}
-
               {error ? (
-                <p className="mt-3 rounded-xl bg-destructive/8 px-3 py-2 text-xs text-destructive">{error}</p>
+                <p role="alert" className="mt-3 rounded-xl bg-destructive/8 px-3 py-2 text-xs text-destructive">{error}</p>
               ) : null}
 
               <button
