@@ -3,9 +3,9 @@
 export const SLIP_COUNTS = [6, 9, 12];
 
 const PAGE_LAYOUTS = {
-  6: { columns: 2, rows: 3, qrSize: 30, nameSize: "11pt", padding: "5mm 4mm", gap: 4 },
-  9: { columns: 3, rows: 3, qrSize: 22, nameSize: "9.5pt", padding: "3.5mm 2.5mm", gap: 2.5 },
-  12: { columns: 3, rows: 4, qrSize: 18, nameSize: "8.5pt", padding: "2.5mm 2mm", gap: 2 },
+  6: { columns: 2, rows: 3, qrSize: 55, nameSize: "12pt", padding: "4mm 3mm", gap: 3 },
+  9: { columns: 3, rows: 3, qrSize: 48, nameSize: "10pt", padding: "3mm 2mm", gap: 2.5 },
+  12: { columns: 3, rows: 4, qrSize: 38, nameSize: "8.5pt", padding: "2mm", gap: 2 },
 };
 
 function getPageLayout(perPage) {
@@ -39,7 +39,7 @@ export default function SlipSheets({ items, qrMap, showId = true, showCategory =
               <div className="slip-qr">
                 {qrMap[item.key] ? <img src={qrMap[item.key]} alt={`QR code for ${item.name}`} /> : null}
               </div>
-              <div className="min-w-0 flex-1">
+              <div className="slip-content">
                 <div className="slip-name">{item.name}</div>
                 {showId ? <div className="slip-id">{item.id}</div> : null}
                 {showCategory && item.category ? <div className="slip-meta">{item.category}</div> : null}

@@ -141,12 +141,21 @@
   border: 0.25mm dashed #b9b9b9;
   padding: var(--slip-padding, 5mm 4mm);
   display: flex;
+  flex-direction: column;
   gap: var(--slip-gap, 4mm);
   align-items: center;
+  justify-content: center;
   background: #fff;
   color: #000;
+  text-align: center;
+  text-transform: uppercase;
   overflow: hidden;
   box-sizing: border-box;
+}
+
+.slip-content {
+  width: 100%;
+  min-width: 0;
 }
 
 .slip-qr {

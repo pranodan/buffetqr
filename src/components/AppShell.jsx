@@ -16,6 +16,7 @@ import {
   LogOut,
   CloudOff,
   Cloud,
+  Leaf,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
@@ -63,7 +64,7 @@ export default function AppShell({ children, role = "admin", conferenceName = "C
           <Link to="/" className="mb-6 flex items-center gap-2.5 px-2">
             <BrandMark />
             <div className="leading-tight">
-              <div className="font-heading text-sm font-semibold">Buffet Access</div>
+              <BrandWordmark />
               <div className="text-[11px] text-muted-foreground">QR check-in</div>
             </div>
           </Link>
@@ -89,7 +90,7 @@ export default function AppShell({ children, role = "admin", conferenceName = "C
           <header className="no-print sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-border/60 bg-background/85 px-4 py-3 backdrop-blur lg:hidden">
             <Link to="/" className="flex items-center gap-2">
               <BrandMark />
-              <span className="font-heading text-sm font-semibold">Buffet Access</span>
+              <BrandWordmark />
             </Link>
             <div className="flex items-center gap-1.5">
               <button
@@ -171,6 +172,21 @@ function BrandMark() {
         <rect x="3" y="14" width="7" height="7" rx="1.6" />
         <path d="M14 14h3v3h-3zM20 14v.01M20 20v.01M14 20v.01" strokeLinecap="round" />
       </svg>
+    </span>
+  );
+}
+
+function BrandWordmark() {
+  return (
+    <span
+      role="img"
+      aria-label="Buffet by Pranodan"
+      className="inline-flex items-center gap-1 font-heading text-sm leading-none"
+    >
+      <span className="font-bold text-red-600">Buffe</span>
+      <Leaf className="h-3 w-3 fill-green-600 text-green-700" aria-hidden="true" />
+      <span className="font-light italic text-foreground">by</span>
+      <span className="font-semibold text-green-700">Pranodan</span>
     </span>
   );
 }

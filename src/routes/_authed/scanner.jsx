@@ -88,6 +88,14 @@ function ScannerPage() {
     setBusy(false);
   };
 
+  const closeResult = () => {
+    setResult(null);
+    if (autoScan) {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  };
+
   const changeSession = async (next) => {
     if (role !== "admin" || next === session) return;
     const config = { ...conference, active_session: next };
@@ -175,6 +183,15 @@ function ScannerPage() {
           <ScanCamera enabled={!busy} onDecoded={handleCode} onError={() => setCameraError(true)} />
         )}
 
+        {!autoScan && busy && !checking && !result ? (
+          <button
+            onClick={dismiss}
+            className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground"
+          >
+            Scan next
+          </button>
+        ) : null}
+
         <div className="grid grid-cols-3 gap-2">
           <Stat label="Redeemed" value={counts.redeemed} />
           <Stat label="Remaining" value={remaining} />
@@ -251,6 +268,7 @@ function ScannerPage() {
         result={result}
         sessionName={sessionLabel(conference, session)}
         onDismiss={dismiss}
+        onClose={closeResult}
         actionLabel={autoScan ? "Tap to scan again" : "Scan next"}
       />
     </AppShell>

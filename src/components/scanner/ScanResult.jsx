@@ -40,7 +40,13 @@ const THEMES = {
   },
 };
 
-export default function ScanResult({ result, sessionName, onDismiss, actionLabel = "Tap to scan again" }) {
+export default function ScanResult({
+  result,
+  sessionName,
+  onDismiss,
+  onClose,
+  actionLabel = "Tap to scan again",
+}) {
   if (!result) return null;
   const theme = THEMES[result.code] || THEMES.ERROR;
   const Icon = theme.icon;
@@ -59,11 +65,13 @@ export default function ScanResult({ result, sessionName, onDismiss, actionLabel
       <p className="mt-5 text-[13px] font-medium uppercase tracking-[0.2em] opacity-80">{theme.title}</p>
       {participant ? (
         <>
-          <h2 className="mt-2 font-heading text-[30px] font-semibold leading-tight">{participant.full_name}</h2>
+          <h2 className="mt-2 font-heading text-[30px] font-semibold leading-tight uppercase">{participant.full_name}</h2>
           <p className="mono mt-1 text-sm opacity-85">{participant.participant_id}</p>
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
-            <span className="rounded-full bg-white/20 px-3 py-1">{sessionName}</span>
-            <span className="rounded-full bg-white/20 px-3 py-1">{participant.category || "Participant"}</span>
+            <span className="rounded-full bg-white/20 px-3 py-1">{buffetSessionLabel(sessionName)}</span>
+            <span className="rounded-full bg-white/20 px-3 py-1">
+              {participant.institution || "Institution not provided"}
+            </span>
           </div>
           {result.code === "DUPLICATE" && result.existing && (
             <p className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-xs">
@@ -80,7 +88,17 @@ export default function ScanResult({ result, sessionName, onDismiss, actionLabel
         <p className="mt-4 max-w-xs text-sm opacity-90">{result.message}</p>
       )}
       {result.code === "GRANTED" && (
-        <p className="mt-6 text-xs uppercase tracking-[0.2em] opacity-70">Saved on this phone</p>
+        <>
+          <p className="mt-6 text-xs uppercase tracking-[0.2em] opacity-70">Saved on this phone</p>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close access granted screen"
+            className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/20"
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </>
       )}
       <button
         type="button"
@@ -91,4 +109,9 @@ export default function ScanResult({ result, sessionName, onDismiss, actionLabel
       </button>
     </div>
   );
+}
+
+function buffetSessionLabel(sessionName) {
+  const label = String(sessionName || "").trim();
+  return /\bbuffet\b/i.test(label) ? label.replace(/\bbuffet\b/i, "Buffet") : `${label} Buffet`;
 }
