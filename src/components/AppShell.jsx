@@ -50,6 +50,7 @@ export default function AppShell({ children, role = "admin", conferenceName = "C
   const { user, logout } = useAuth();
   const sync = useSyncStatus();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
 
   const allowed = NAV.filter((item) => item.roles.includes(role));
   const mainItems = allowed.slice(0, 4);
@@ -103,9 +104,15 @@ export default function AppShell({ children, role = "admin", conferenceName = "C
                 {sync.online ? <Cloud className="h-3 w-3" /> : <CloudOff className="h-3 w-3" />}
                 {sync.running ? "syncing" : sync.pending ? `${sync.pending} pending` : sync.online ? "synced" : "offline"}
               </button>
-              <div className="grid h-8 w-8 place-items-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground">
+              <button
+                type="button"
+                onClick={() => setAccountOpen(true)}
+                aria-label="Open account profile"
+                title="Account"
+                className="grid h-9 w-9 place-items-center rounded-full bg-primary text-[11px] font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
                 {(user?.full_name || user?.email || "?").slice(0, 2).toUpperCase()}
-              </div>
+              </button>
             </div>
           </header>
 
@@ -159,6 +166,27 @@ export default function AppShell({ children, role = "admin", conferenceName = "C
           </button>
         </SheetContent>
       </Sheet>
+
+      <Sheet open={accountOpen} onOpenChange={setAccountOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl pb-8">
+          <SheetHeader className="mb-3 text-left">
+            <SheetTitle className="font-heading text-base">Profile</SheetTitle>
+          </SheetHeader>
+          <div className="rounded-xl border border-border/70 bg-card px-3.5 py-3">
+            <p className="text-sm font-semibold">{user?.full_name || "Signed-in user"}</p>
+            {user?.email ? <p className="mt-0.5 text-xs text-muted-foreground">{user.email}</p> : null}
+            <p className="mt-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              {role || "Staff"}
+            </p>
+          </div>
+          <button
+            onClick={() => logout()}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-border px-3 py-3 text-sm text-muted-foreground"
+          >
+            <LogOut className="h-4 w-4" /> Sign out
+          </button>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
@@ -181,12 +209,16 @@ function BrandWordmark() {
     <span
       role="img"
       aria-label="Buffet by Pranodan"
-      className="inline-flex items-center gap-1 font-heading text-sm leading-none"
+      className="inline-flex items-center font-heading text-sm leading-none"
     >
-      <span className="font-bold text-red-600">Buffe</span>
-      <Leaf className="h-3 w-3 fill-green-600 text-green-700" aria-hidden="true" />
-      <span className="font-light italic text-foreground">by</span>
-      <span className="font-semibold text-green-700">Pranodan</span>
+      <span className="font-bold text-red-600">
+        Buffe
+        <sup className="ml-0.5 align-super">
+          <Leaf className="inline h-2.5 w-2.5 fill-green-600 text-green-700" aria-hidden="true" />
+        </sup>
+      </span>
+      <span className="ml-1 font-light italic text-foreground">by</span>
+      <span className="ml-1 font-semibold text-green-700">Pranodan</span>
     </span>
   );
 }

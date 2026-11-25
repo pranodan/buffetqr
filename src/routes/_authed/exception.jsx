@@ -131,12 +131,12 @@ function ExceptionPage() {
                     type="button"
                     onClick={() => {
                       setSelected(p);
-                      setSearch(p.full_name);
+                      setSearch(p.full_name.toUpperCase());
                       setResults([]);
                     }}
                     className="flex w-full items-center gap-2 px-1 py-2.5 text-left text-xs"
                   >
-                    <span className="min-w-0 flex-1 truncate">{p.full_name}</span>
+                    <span className="min-w-0 flex-1 truncate uppercase">{p.full_name}</span>
                     <span className="mono shrink-0 text-[10px] text-muted-foreground">{p.participant_id}</span>
                   </button>
                 ))}
@@ -145,7 +145,7 @@ function ExceptionPage() {
 
             {selected ? (
               <div className="mt-3 rounded-xl bg-muted/60 p-3">
-                <p className="font-heading text-sm font-semibold">{selected.full_name}</p>
+                <p className="font-heading text-sm font-semibold uppercase">{selected.full_name}</p>
                 <p className="mono text-[11px] text-muted-foreground">{selected.participant_id}</p>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
                   <p>

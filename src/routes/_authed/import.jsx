@@ -169,7 +169,7 @@ function ImportPage() {
                           <tr key={`${r.line}-${r.participant_id}`} className={r.errors.length ? "bg-destructive/5" : ""}>
                             <td className="px-3 py-2 text-muted-foreground">{r.line}</td>
                             <td className="mono px-3 py-2">{r.participant_id || "—"}</td>
-                            <td className="px-3 py-2">{r.full_name || "—"}</td>
+                            <td className="px-3 py-2 uppercase">{r.full_name || "—"}</td>
                             <td className="px-3 py-2">{r.day1_eligible ? "yes" : "no"}</td>
                             <td className="px-3 py-2">{r.day2_eligible ? "yes" : "no"}</td>
                             <td className="px-3 py-2">

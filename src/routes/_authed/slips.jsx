@@ -233,7 +233,7 @@ function SlipsPage() {
                     ) : (
                       <Square className="h-4 w-4 shrink-0 text-muted-foreground/50" />
                     )}
-                    <span className="min-w-0 flex-1 truncate">{p.full_name}</span>
+                    <span className="min-w-0 flex-1 truncate uppercase">{p.full_name}</span>
                     <span className="mono shrink-0 text-[10px] text-muted-foreground">{p.participant_id}</span>
                     {p.token_status !== "ACTIVE" ? (
                       <span className="shrink-0 text-[10px] uppercase text-destructive">revoked</span>

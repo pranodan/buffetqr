@@ -298,7 +298,7 @@ function ReservePage() {
                 className="flex w-full items-center gap-2 px-1 py-2.5 text-left text-xs disabled:opacity-50"
               >
                 <Ticket className="h-3.5 w-3.5 text-primary" />
-                <span className="min-w-0 flex-1 truncate">{p.full_name}</span>
+                <span className="min-w-0 flex-1 truncate uppercase">{p.full_name}</span>
                 <span className="mono shrink-0 text-[10px] text-muted-foreground">{p.participant_id}</span>
               </button>
             ))}

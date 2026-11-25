@@ -188,7 +188,7 @@ function RegisterPage() {
                   />
                 ) : null}
                 <div className="min-w-0">
-                  <p className="font-heading text-lg font-semibold leading-tight">{created.full_name}</p>
+                  <p className="font-heading text-lg font-semibold leading-tight uppercase">{created.full_name}</p>
                   <p className="mono mt-1 text-xs text-muted-foreground">{created.participant_id}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {created.category}
@@ -277,7 +277,7 @@ function RegisterPage() {
                 onChange={set("full_name")}
                 autoFocus
                 placeholder="e.g. Dr. Sita Sharma"
-                className="mt-1.5 w-full rounded-xl border border-input bg-background px-3.5 py-3 font-heading text-lg outline-none focus:border-primary"
+                className="mt-1.5 w-full rounded-xl border border-input bg-background px-3.5 py-3 font-heading text-lg uppercase outline-none focus:border-primary"
               />
 
               {matches.length ? (
@@ -289,7 +289,7 @@ function RegisterPage() {
                     {matches.map((m) => (
                       <li key={m.participant_id} className="flex items-center justify-between gap-2 text-xs">
                         <span className="truncate">
-                          {m.full_name} <span className="mono text-muted-foreground">{m.participant_id}</span>
+                          {m.full_name.toUpperCase()} <span className="mono text-muted-foreground">{m.participant_id}</span>
                         </span>
                         <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">
                           {m.registration_source === "SPOT_REGISTERED" ? "spot" : "pre-registered"}

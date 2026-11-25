@@ -88,17 +88,17 @@ export default function ScanResult({
         <p className="mt-4 max-w-xs text-sm opacity-90">{result.message}</p>
       )}
       {result.code === "GRANTED" && (
-        <>
-          <p className="mt-6 text-xs uppercase tracking-[0.2em] opacity-70">Saved on this phone</p>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close access granted screen"
-            className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/20"
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </>
+        <p className="mt-6 text-xs uppercase tracking-[0.2em] opacity-70">Saved on this phone</p>
+      )}
+      {(result.code === "GRANTED" || result.code === "DUPLICATE") && (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={`Close ${theme.title.toLowerCase()} screen`}
+          className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/20"
+        >
+          <X className="h-5 w-5" aria-hidden="true" />
+        </button>
       )}
       <button
         type="button"

@@ -159,7 +159,7 @@ function ParticipantsPage() {
               className="flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left transition-colors hover:bg-muted/50"
             >
               <div className="min-w-0">
-                <p className="truncate font-heading text-sm font-semibold">{p.full_name}</p>
+                <p className="truncate font-heading text-sm font-semibold uppercase">{p.full_name}</p>
                 <p className="mono truncate text-[11px] text-muted-foreground">
                   {p.participant_id} · {p.category || "Participant"}
                 </p>
@@ -190,7 +190,7 @@ function ParticipantsPage() {
           {selected ? (
             <>
               <SheetHeader className="text-left">
-                <SheetTitle className="font-heading text-lg">{selected.full_name}</SheetTitle>
+                <SheetTitle className="font-heading text-lg uppercase">{selected.full_name}</SheetTitle>
                 <p className="mono text-xs text-muted-foreground">{selected.participant_id}</p>
               </SheetHeader>
 
@@ -240,7 +240,7 @@ function ParticipantsPage() {
                     )
                   }
                   onResetScan={role === "admin" ? () => {
-                    if (!window.confirm(`Mark ${selected.full_name} as not scanned for Day 1?`)) return;
+                    if (!window.confirm(`Mark ${selected.full_name.toUpperCase()} as not scanned for Day 1?`)) return;
                     act(() => resetParticipantScan(selected.participant_id, "day1", actor));
                   } : null}
                 />
@@ -260,7 +260,7 @@ function ParticipantsPage() {
                     )
                   }
                   onResetScan={role === "admin" ? () => {
-                    if (!window.confirm(`Mark ${selected.full_name} as not scanned for Day 2?`)) return;
+                    if (!window.confirm(`Mark ${selected.full_name.toUpperCase()} as not scanned for Day 2?`)) return;
                     act(() => resetParticipantScan(selected.participant_id, "day2", actor));
                   } : null}
                 />
@@ -299,7 +299,7 @@ function ParticipantsPage() {
                     </button>
                     <button
                       onClick={async () => {
-                        if (!window.confirm(`Delete ${selected.full_name}? Redemption history is kept.`)) return;
+                        if (!window.confirm(`Delete ${selected.full_name.toUpperCase()}? Redemption history is kept.`)) return;
                         await deleteParticipant(selected.participant_id, actor);
                         setSelected(null);
                         refresh();

@@ -36,7 +36,7 @@ function ReportsPage() {
   const exportParticipants = async () => {
     const rows = (stats?.participants || []).map((p) => ({
       participant_id: p.participant_id,
-      full_name: p.full_name,
+      full_name: String(p.full_name || "").toUpperCase(),
       category: p.category,
       institution: p.institution,
       designation: p.designation,
@@ -60,7 +60,7 @@ function ReportsPage() {
       .map((r) => ({
         transaction_id: r.transaction_id,
         participant_id: r.participant_id,
-        participant_name: r.participant_name,
+        participant_name: String(r.participant_name || "").toUpperCase(),
         session: r.session,
         type: r.type,
         timestamp: r.timestamp,
