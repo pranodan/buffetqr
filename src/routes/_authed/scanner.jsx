@@ -39,6 +39,7 @@ function ScannerPage() {
   const busyRef = useRef(false);
 
   const session = conference.active_session || "day1";
+  const autoScan = conference.auto_scan !== false;
   const actor = user?.full_name || user?.email || "Buffet operator";
 
   useEffect(() => {
@@ -71,12 +72,14 @@ function ScannerPage() {
       beep(res.code === "GRANTED" ? "success" : res.code === "NOT_ELIGIBLE" || res.code === "ERROR" ? "warn" : "error");
     }
     refreshCounts();
-    const delay = res.code === "GRANTED" ? 1700 : 3200;
-    window.setTimeout(() => {
-      setResult(null);
-      busyRef.current = false;
-      setBusy(false);
-    }, delay);
+    if (autoScan) {
+      const delay = res.code === "GRANTED" ? 1700 : 3200;
+      window.setTimeout(() => {
+        setResult(null);
+        busyRef.current = false;
+        setBusy(false);
+      }, delay);
+    }
   };
 
   const dismiss = () => {
@@ -244,7 +247,12 @@ function ScannerPage() {
         </div>
       </div>
 
-      <ScanResult result={result} sessionName={sessionLabel(conference, session)} onDismiss={dismiss} />
+      <ScanResult
+        result={result}
+        sessionName={sessionLabel(conference, session)}
+        onDismiss={dismiss}
+        actionLabel={autoScan ? "Tap to scan again" : "Scan next"}
+      />
     </AppShell>
   );
 }

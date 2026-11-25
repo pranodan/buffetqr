@@ -47,9 +47,9 @@ function SettingsPage() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([getConference(), runSync("settings-load")])
-      .then(async ([config]) => {
-        const rows = await dbAll("staff");
+    runSync("settings-load")
+      .then(async () => {
+        const [config, rows] = await Promise.all([getConference(), dbAll("staff")]);
         if (!active) return;
         setForm(config);
         setStaff(rows.sort((a, b) => a.email.localeCompare(b.email)));
@@ -284,6 +284,17 @@ function SettingsPage() {
               onChange={(v) => setForm({ ...form, day2_enabled: v })}
             />
           </div>
+          <div className="mt-3 rounded-xl border border-border/60 px-3 py-2.5">
+            <Toggle
+              label="Automatically scan the next pass"
+              checked={form.auto_scan !== false}
+              onChange={(v) => setForm({ ...form, auto_scan: v })}
+            />
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+              When off, the scanner waits for the operator to press Scan next after each result. This setting syncs
+              to the other phones.
+            </p>
+          </div>
           <div className="mt-3 flex gap-2">
             <button
               onClick={saveConfig}
@@ -342,13 +353,14 @@ function SettingsPage() {
                 </div>
                 <select
                   value={s.role}
+                  disabled={s.email === (user?.email || "").trim().toLowerCase() && s.role === "admin"}
                   onChange={async (e) => {
                     const next = { ...s, role: e.target.value };
                     await dbPut("staff", next);
                     await queue("staff", next, { sync: true });
                     setStaff((prev) => prev.map((row) => (row.email === s.email ? next : row)));
                   }}
-                  className="shrink-0 rounded-lg border border-input bg-background px-2 py-1.5 text-[11px]"
+                  className="shrink-0 rounded-lg border border-input bg-background px-2 py-1.5 text-[11px] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {STAFF_ROLES.map((r) => (
                     <option key={r.id} value={r.id}>

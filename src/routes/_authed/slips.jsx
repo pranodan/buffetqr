@@ -5,7 +5,7 @@ import AppShell from "@/components/AppShell";
 import NoAccess from "@/components/NoAccess";
 import PageLoading from "@/components/PageLoading";
 import PageHeader from "@/components/PageHeader";
-import SlipSheets, { pageCount } from "@/components/slips/SlipSheets";
+import SlipSheets, { pageCount, SLIP_COUNTS } from "@/components/slips/SlipSheets";
 import { useAppSession } from "@/hooks/useAppSession";
 import { useConference } from "@/hooks/useConference";
 import { allParticipants } from "@/lib/participants";
@@ -26,6 +26,7 @@ function SlipsPage() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [sort, setSort] = useState("name");
+  const [perPage, setPerPage] = useState(6);
   const [excluded, setExcluded] = useState(() => new Set());
   const [qrMap, setQrMap] = useState({});
   const [building, setBuilding] = useState(false);
@@ -138,7 +139,7 @@ function SlipsPage() {
           <PageHeader
             eyebrow={conference.name}
             title="QR slips"
-            description="Six slips per A4 page, 2 columns by 3 rows. Print at 100% and cut on the dashed lines."
+            description={`${perPage} slips per A4 page. Print at 100% and cut on the dashed lines.`}
             actions={
               <>
                 <button
@@ -160,7 +161,7 @@ function SlipsPage() {
             }
           />
 
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-4">
             <div className="relative sm:col-span-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -190,12 +191,24 @@ function SlipsPage() {
               <option value="name">Sort by name</option>
               <option value="id">Sort by registration ID</option>
             </select>
+            <select
+              aria-label="QR codes per A4 sheet"
+              value={perPage}
+              onChange={(e) => setPerPage(Number(e.target.value))}
+              className="rounded-xl border border-input bg-card px-3 py-2.5 text-sm outline-none focus:border-primary"
+            >
+              {SLIP_COUNTS.map((count) => (
+                <option key={count} value={count}>
+                  {count} per A4 sheet
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/70 bg-card px-3.5 py-2.5 text-xs">
             <p className="text-muted-foreground">
               <span className="font-semibold text-foreground">{items.length}</span> slips ·{" "}
-              <span className="font-semibold text-foreground">{pageCount(items.length)}</span> A4 pages
+              <span className="font-semibold text-foreground">{pageCount(items.length, perPage)}</span> A4 pages
               {building ? " · preparing codes…" : ""}
             </p>
             <div className="flex gap-2">
@@ -243,7 +256,7 @@ function SlipsPage() {
 
         <div className="mt-6 overflow-x-auto">
           <div ref={sheetsRef} className={cn("w-[194mm] min-w-[194mm]", !items.length && "hidden")}>
-            <SlipSheets items={items} qrMap={qrMap} showId={false} showCategory={false} />
+            <SlipSheets items={items} qrMap={qrMap} showId={false} showCategory={false} perPage={perPage} />
           </div>
         </div>
 

@@ -40,15 +40,17 @@ const THEMES = {
   },
 };
 
-export default function ScanResult({ result, sessionName, onDismiss }) {
+export default function ScanResult({ result, sessionName, onDismiss, actionLabel = "Tap to scan again" }) {
   if (!result) return null;
   const theme = THEMES[result.code] || THEMES.ERROR;
   const Icon = theme.icon;
   const participant = result.participant;
 
   return (
-    <button
-      onClick={onDismiss}
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={theme.title}
       className={`fixed inset-0 z-50 flex w-full flex-col items-center justify-center px-6 text-center ${theme.bg} ${theme.tone}`}
     >
       <span className="grid h-20 w-20 place-items-center rounded-full bg-white/20">
@@ -80,7 +82,13 @@ export default function ScanResult({ result, sessionName, onDismiss }) {
       {result.code === "GRANTED" && (
         <p className="mt-6 text-xs uppercase tracking-[0.2em] opacity-70">Saved on this phone</p>
       )}
-      <p className="absolute bottom-8 text-[11px] uppercase tracking-[0.2em] opacity-60">Tap to scan again</p>
-    </button>
+      <button
+        type="button"
+        onClick={onDismiss}
+        className="absolute bottom-8 rounded-full bg-white/20 px-5 py-3 text-[11px] font-medium uppercase tracking-[0.2em]"
+      >
+        {actionLabel}
+      </button>
+    </div>
   );
 }

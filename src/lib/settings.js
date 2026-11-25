@@ -10,6 +10,7 @@ export const DEFAULT_CONFERENCE = {
   day1_enabled: true,
   day2_enabled: true,
   active_session: "day1",
+  auto_scan: true,
 };
 
 export const DEFAULT_PREFS = {
@@ -25,6 +26,7 @@ export async function getConference() {
 export async function saveConference(next, { push = true } = {}) {
   const config = { ...DEFAULT_CONFERENCE, ...next };
   await setMeta("conference", config);
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("buffetflow:conference-updated"));
   if (push) await queue("setting", { key: "conference", value: JSON.stringify(config) });
   return config;
 }

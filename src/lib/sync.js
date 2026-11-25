@@ -415,6 +415,7 @@ async function pullAll() {
     if (s.key === "conference" && !pendingSettings.has("conference")) {
       try {
         await setMeta("conference", JSON.parse(s.value || "{}"));
+        if (typeof window !== "undefined") window.dispatchEvent(new Event("buffetflow:conference-updated"));
       } catch {
         /* ignore malformed config */
       }

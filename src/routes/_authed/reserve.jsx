@@ -5,7 +5,7 @@ import AppShell from "@/components/AppShell";
 import NoAccess from "@/components/NoAccess";
 import PageLoading from "@/components/PageLoading";
 import PageHeader from "@/components/PageHeader";
-import SlipSheets from "@/components/slips/SlipSheets";
+import SlipSheets, { pageCount, SLIP_COUNTS } from "@/components/slips/SlipSheets";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAppSession } from "@/hooks/useAppSession";
 import { useConference } from "@/hooks/useConference";
@@ -34,6 +34,7 @@ function ReservePage() {
   const [busy, setBusy] = useState(false);
   const [qrMap, setQrMap] = useState({});
   const [showSheets, setShowSheets] = useState(false);
+  const [perPage, setPerPage] = useState(6);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [assigning, setAssigning] = useState(null);
   const [search, setSearch] = useState("");
@@ -118,10 +119,9 @@ function ReservePage() {
 
   const sheetItems = unused.map((t) => ({
     key: t.token,
-    name: "Reserve buffet pass",
+    name: "Buffet Pass",
     id: t.token,
-    category: `Batch ${t.batch || "—"}`,
-    institution: "Assigned at Registration desk",
+    writeName: true,
   }));
 
   return (
@@ -172,11 +172,25 @@ function ReservePage() {
             </div>
             <p className="mt-2 text-[11px] text-muted-foreground">
               {unused.length} unused · {tokens.filter((t) => t.status === "ASSIGNED").length} assigned ·{" "}
-              {tokens.filter((t) => t.status === "REVOKED").length} revoked
+              {tokens.filter((t) => t.status === "REVOKED").length} revoked · {pageCount(unused.length, perPage)} A4 pages
             </p>
           </div>
 
           <div className="mt-3 flex flex-wrap gap-2">
+            <label className="flex items-center gap-2 rounded-xl border border-border bg-card px-3.5 py-2.5 text-xs">
+              <span>QR codes per A4 sheet</span>
+              <select
+                value={perPage}
+                onChange={(e) => setPerPage(Number(e.target.value))}
+                className="bg-transparent font-medium outline-none"
+              >
+                {SLIP_COUNTS.map((count) => (
+                  <option key={count} value={count}>
+                    {count}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button
               onClick={prepareSheets}
               disabled={busy || !unused.length}
@@ -254,7 +268,7 @@ function ReservePage() {
         {showSheets && sheetItems.length ? (
           <div className="mt-6 overflow-x-auto">
             <div id="reserve-sheets" className="w-[194mm] min-w-[194mm]">
-              <SlipSheets items={sheetItems} qrMap={qrMap} showId={false} showCategory={false} />
+              <SlipSheets items={sheetItems} qrMap={qrMap} showId={false} showCategory={false} perPage={perPage} />
             </div>
           </div>
         ) : null}

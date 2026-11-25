@@ -6,16 +6,18 @@ export function useConference() {
   const [prefs, setPrefsState] = useState(DEFAULT_PREFS);
   const [ready, setReady] = useState(false);
 
-  const reload = async () => {
+  const reload = useCallback(async () => {
     const [config, local] = await Promise.all([getConference(), getPrefs()]);
     setConference(config);
     setPrefsState(local);
     setReady(true);
-  };
+  }, []);
 
   useEffect(() => {
     reload();
-  }, []);
+    window.addEventListener("buffetflow:conference-updated", reload);
+    return () => window.removeEventListener("buffetflow:conference-updated", reload);
+  }, [reload]);
 
   const updatePrefs = async (patch) => {
     const next = await savePrefs(patch);
