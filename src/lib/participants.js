@@ -47,6 +47,9 @@ async function uniqueParticipantId(prefix) {
 }
 
 export async function createParticipant(input, { actor, source = "SPOT_REGISTERED" } = {}) {
+    if (!String(input.full_name || "").trim()) {
+    throw new Error("Participant name is required.");
+  }
   const now = new Date().toISOString();
   const participantId = input.participant_id || (await uniqueParticipantId(source === "MANUALLY_ADDED" ? "MN" : "SP"));
   const reserveToken = input.qr_token ? await dbGet("tokens", String(input.qr_token).trim().toLowerCase()) : null;
