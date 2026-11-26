@@ -36,6 +36,7 @@ function ParticipantsPage() {
   const [list, setList] = useState([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
+  const [sortDay, setSortDay] = useState("day1");
   const [selected, setSelected] = useState(null);
   const [qr, setQr] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -85,6 +86,29 @@ function ParticipantsPage() {
       return true;
     });
   }, [list, query, filter]);
+
+  const sortedFiltered = useMemo(() => {
+  const redeemedKey =
+    sortDay === "day1" ? "day1_redeemed" : "day2_redeemed";
+
+  const eligibleKey =
+    sortDay === "day1" ? "day1_eligible" : "day2_eligible";
+
+  return [...filtered].sort((a, b) => {
+    const getPriority = (p) => {
+      if (p[redeemedKey]) return 0; // Scanned
+      if (p[eligibleKey] && p.token_status === "ACTIVE") return 1; // Pending
+      return 2; // Ineligible or revoked
+    };
+
+    const priorityDifference =
+      getPriority(a) - getPriority(b);
+
+    if (priorityDifference !== 0) return priorityDifference;
+
+    return (a.full_name || "").localeCompare(b.full_name || "");
+  });
+  }, [filtered, sortDay]);
 
   const refresh = async (id) => {
     const rows = await allParticipants();
@@ -427,6 +451,20 @@ function ParticipantsPage() {
             className="w-full rounded-xl border border-input bg-card py-2.5 pl-9 pr-3 text-sm outline-none focus:border-primary"
           />
         </div>
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card px-3 py-2">
+          <span className="text-xs font-medium text-muted-foreground">
+            Sort scanned first
+          </span>
+        
+          <select
+            value={sortDay}
+            onChange={(e) => setSortDay(e.target.value)}
+            className="rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold outline-none focus:border-primary"
+          >
+            <option value="day1">Day 1 (D1)</option>
+            <option value="day2">Day 2 (D2)</option>
+          </select>
+        </div>
 
         <div className="hide-scrollbar mt-3 flex gap-1.5 overflow-x-auto pb-1">
           {FILTERS.map((f) => (
@@ -446,7 +484,7 @@ function ParticipantsPage() {
         </div>
 
         <div className="mt-3 divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/70 bg-card">
-          {filtered.slice(0, limit).map((p) => (
+          {sortedFiltered.slice(0, limit).map((p) => (
             <button
               key={p.participant_id}
               onClick={() => setSelected(p)}
@@ -464,12 +502,12 @@ function ParticipantsPage() {
               </div>
             </button>
           ))}
-          {!filtered.length ? (
+          {!sortedFiltered.length ? (
             <p className="px-4 py-10 text-center text-sm text-muted-foreground">No matching participants.</p>
           ) : null}
         </div>
 
-        {filtered.length > limit ? (
+        Show more ({filtered.length - limit} left)
           <button
             onClick={() => setLimit((l) => l + 40)}
             className="mt-3 w-full rounded-xl border border-border bg-card py-2.5 text-xs font-medium"
