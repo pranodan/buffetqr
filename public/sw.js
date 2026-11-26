@@ -34,6 +34,24 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("message", (event) => {
   if (event.data?.type === "PURGE_CACHED_PAGES") {
     event.waitUntil(caches.delete(PAGE_CACHE));
+    return;
+  }
+  if (event.data?.type === "PRECACHE_ASSETS" && Array.isArray(event.data.urls)) {
+    event.waitUntil((async () => {
+      const cache = await caches.open(ASSET_CACHE);
+      const urls = event.data.urls
+        .filter((path) => typeof path === "string" && (/^\/assets\//.test(path) || /^\/_build\//.test(path)))
+        .slice(0, MAX_ASSETS);
+      await Promise.all(urls.map(async (path) => {
+        try {
+          const response = await fetch(path, { credentials: "same-origin" });
+          if (response.ok) await cache.put(path, response);
+        } catch {
+          // A failed asset fetch is retried naturally when the app is next online.
+        }
+      }));
+      await trimCache(ASSET_CACHE, MAX_ASSETS);
+    })());
   }
 });
 
