@@ -7,7 +7,7 @@ import PageLoading from "@/components/PageLoading";
 import PageHeader from "@/components/PageHeader";
 import { useAppSession } from "@/hooks/useAppSession";
 import { useConference } from "@/hooks/useConference";
-import { computeStats } from "@/lib/stats";
+import { computeStats, resetDuplicateAttempts } from "@/lib/stats";
 import { downloadText, toCsv } from "@/lib/csv";
 import { buildBackup, restoreBackup, summariseBackup } from "@/lib/backup";
 import { pct } from "@/lib/format";
@@ -21,13 +21,14 @@ export const Route = createFileRoute("/_authed/reports")({
 const DAY = () => new Date().toISOString().slice(0, 10);
 
 function ReportsPage() {
-  const { role, loading } = useAppSession();
+  const { role, user, loading } = useAppSession();
   const { conference, ready } = useConference();
   const [stats, setStats] = useState(null);
   const [restorePreview, setRestorePreview] = useState(null);
   const [restorePayload, setRestorePayload] = useState(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [resetBusy, setResetBusy] = useState(false);
 
   useEffect(() => {
     computeStats().then(setStats);
@@ -116,6 +117,26 @@ function ReportsPage() {
     }
   };
 
+  const handleResetDuplicates = async () => {
+    const confirmed = window.confirm(
+      "Reset duplicate scan counts for BOTH days on all synced devices? Historical audit records will be retained."
+    );
+    if (!confirmed) return;
+    setResetBusy(true);
+    setMessage("");
+    try {
+      const actor = user?.full_name || user?.email || "";
+      await resetDuplicateAttempts(actor);
+      await runSync("duplicate-attempts-reset");
+      setStats(await computeStats());
+      setMessage("Duplicate scan counts have been reset globally. Historical audit records remain available in the audit export.");
+    } catch (error) {
+      setMessage(`Duplicate reset could not be completed: ${String(error?.message || error)}`);
+    } finally {
+      setResetBusy(false);
+    }
+  };
+
   const confirmRestore = async () => {
     setBusy(true);
     try {
@@ -194,6 +215,20 @@ function ReportsPage() {
               </div>
             );
           })}
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-border/70 bg-card p-4">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Duplicate scan counters</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Reset duplicate counts for both days across synced devices. This does not delete audit history or change participant scan eligibility.
+          </p>
+          <button
+            onClick={handleResetDuplicates}
+            disabled={resetBusy || busy}
+            className="mt-3 rounded-xl border border-warning/40 bg-warning/5 px-3 py-2 text-xs font-semibold text-warning disabled:opacity-60"
+          >
+            {resetBusy ? "Resetting…" : "Reset all duplicate counts"}
+          </button>
         </div>
 
         <div className="mt-4 rounded-2xl border border-border/70 bg-card p-4">
