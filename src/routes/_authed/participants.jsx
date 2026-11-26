@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Printer, RefreshCw, Trash2, Ban, ShieldCheck, X, RotateCcw } from "lucide-react";
+import { Search, Printer, RefreshCw, Trash2, Ban, ShieldCheck, X, RotateCcw, UserPlus, Loader2 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import NoAccess from "@/components/NoAccess";
 import PageLoading from "@/components/PageLoading";
@@ -9,7 +9,7 @@ import SyncBadge from "@/components/SyncBadge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAppSession } from "@/hooks/useAppSession";
 import { useConference } from "@/hooks/useConference";
-import { allParticipants, deleteParticipant, replaceToken, resetParticipantScan, revokeToken, updateParticipant } from "@/lib/participants";
+import { allParticipants, createParticipant, deleteParticipant, replaceToken, resetParticipantScan, revokeToken, updateParticipant } from "@/lib/participants";
 import { qrDataUrl } from "@/lib/qr";
 import { printSingleSlip } from "@/lib/slipPrint";
 import { formatNPT } from "@/lib/format";
@@ -42,6 +42,20 @@ function ParticipantsPage() {
   const [actionError, setActionError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
   const [limit, setLimit] = useState(40);
+    const [showAddForm, setShowAddForm] = useState(false);
+
+  const [newParticipant, setNewParticipant] = useState({
+    full_name: "",
+    category: "Participant",
+    institution: "",
+    designation: "",
+    email: "",
+    phone: "",
+    day1_eligible: true,
+    day2_eligible: true,
+  });
+
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     allParticipants().then((rows) =>
@@ -91,6 +105,50 @@ function ParticipantsPage() {
       setBusy(false);
     }
   };
+    const addParticipant = async (e) => {
+    e.preventDefault();
+    setActionError("");
+
+    if (!newParticipant.full_name.trim()) {
+      setActionError("Please enter the participant's name.");
+      return;
+    }
+
+    setAdding(true);
+
+    try {
+      const record = await createParticipant(
+        {
+          ...newParticipant,
+          full_name: newParticipant.full_name.trim(),
+        },
+        {
+          actor,
+          source: "MANUALLY_ADDED",
+        }
+      );
+
+      await refresh(record.participant_id);
+
+      setSelected(record);
+      setShowAddForm(false);
+
+      setNewParticipant({
+        full_name: "",
+        category: "Participant",
+        institution: "",
+        designation: "",
+        email: "",
+        phone: "",
+        day1_eligible: true,
+        day2_eligible: true,
+      });
+    } catch (err) {
+      setActionError(String(err?.message || err));
+    } finally {
+      setAdding(false);
+    }
+  };
 
   if (loading || !ready) {
     return (
@@ -115,14 +173,250 @@ function ParticipantsPage() {
           title="Participants"
           description={`${list.length} records on this phone`}
           actions={
-            <button
-              onClick={() => refresh()}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium"
-            >
-              <RefreshCw className="h-3.5 w-3.5" /> Refresh
-            </button>
+            <div className="flex gap-2">
+              {role === "admin" && (
+                <button
+                  onClick={() => {
+                    setActionError("");
+                    setShowAddForm(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-medium text-primary-foreground"
+                >
+                  <UserPlus className="h-3.5 w-3.5" />
+                  Add Participant
+                </button>
+              )}
+
+              <button
+                onClick={() => refresh()}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Refresh
+              </button>
+            </div>
           }
         />
+        
+        {showAddForm && role === "admin" && (
+          <form
+            onSubmit={addParticipant}
+            className="mb-4 space-y-3 rounded-2xl border border-border/70 bg-card p-4"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-heading text-sm font-semibold">
+                  Add New Participant
+                </h3>
+              {actionError && (
+              <p className="rounded-xl bg-destructive/8 px-3 py-2 text-xs text-destructive">
+                {actionError}
+              </p>
+            )}
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  A new QR pass will be generated automatically.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowAddForm(false)}
+                className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium">
+                Full name *
+              </label>
+              <input
+                required
+                autoFocus
+                value={newParticipant.full_name}
+                onChange={(e) =>
+                  setNewParticipant({
+                    ...newParticipant,
+                    full_name: e.target.value,
+                  })
+                }
+                placeholder="Enter participant's full name"
+                className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium">
+                  Category
+                </label>
+                <select
+                  value={newParticipant.category}
+                  onChange={(e) =>
+                    setNewParticipant({
+                      ...newParticipant,
+                      category: e.target.value,
+                    })
+                  }
+                  className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-xs"
+                >
+                  {[
+                    "Participant",
+                    "Delegate",
+                    "Speaker",
+                    "Faculty",
+                    "Organiser",
+                    "Volunteer",
+                    "Student",
+                    "Guest",
+                    "Media",
+                    "Accompanying person",
+                  ].map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium">
+                  Institution
+                </label>
+                <input
+                  value={newParticipant.institution}
+                  onChange={(e) =>
+                    setNewParticipant({
+                      ...newParticipant,
+                      institution: e.target.value,
+                    })
+                  }
+                  placeholder="Institution"
+                  className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium">
+                Designation
+              </label>
+              <input
+                value={newParticipant.designation}
+                onChange={(e) =>
+                  setNewParticipant({
+                    ...newParticipant,
+                    designation: e.target.value,
+                  })
+                }
+                placeholder="Designation"
+                className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-xs"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={newParticipant.email}
+                  onChange={(e) =>
+                    setNewParticipant({
+                      ...newParticipant,
+                      email: e.target.value,
+                    })
+                  }
+                  placeholder="Email address"
+                  className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium">
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  value={newParticipant.phone}
+                  onChange={(e) =>
+                    setNewParticipant({
+                      ...newParticipant,
+                      phone: e.target.value,
+                    })
+                  }
+                  placeholder="Phone number"
+                  className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border/70 p-3">
+              <p className="mb-3 text-xs font-semibold">
+                Buffet eligibility
+              </p>
+
+              <div className="space-y-3">
+                <label className="flex items-center justify-between text-xs">
+                  <span>Day 1 buffet</span>
+                  <input
+                    type="checkbox"
+                    checked={newParticipant.day1_eligible}
+                    onChange={(e) =>
+                      setNewParticipant({
+                        ...newParticipant,
+                        day1_eligible: e.target.checked,
+                      })
+                    }
+                    className="h-4 w-4 accent-primary"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between text-xs">
+                  <span>Day 2 buffet</span>
+                  <input
+                    type="checkbox"
+                    checked={newParticipant.day2_eligible}
+                    onChange={(e) =>
+                      setNewParticipant({
+                        ...newParticipant,
+                        day2_eligible: e.target.checked,
+                      })
+                    }
+                    className="h-4 w-4 accent-primary"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                type="submit"
+                disabled={adding || !newParticipant.full_name.trim()}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+              >
+                {adding ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <UserPlus className="h-4 w-4" />
+                )}
+                {adding ? "Creating..." : "Create Participant & QR"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowAddForm(false)}
+                disabled={adding}
+                className="rounded-xl border border-border px-4 py-3 text-xs font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+
 
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
