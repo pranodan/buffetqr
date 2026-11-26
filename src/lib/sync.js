@@ -420,6 +420,13 @@ async function pullAll() {
         /* ignore malformed config */
       }
     }
+    if (s.key === "duplicate_attempts_reset_at" && !pendingSettings.has("duplicate_attempts_reset_at")) {
+      const remoteTime = Date.parse(s.value || "");
+      const localTime = Date.parse(await getMeta("duplicateAttemptsResetAt", ""));
+      if (Number.isFinite(remoteTime) && (!Number.isFinite(localTime) || remoteTime > localTime)) {
+        await setMeta("duplicateAttemptsResetAt", s.value);
+      }
+    }
   }
 
   await dbClear("staff");
