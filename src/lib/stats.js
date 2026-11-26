@@ -1,12 +1,16 @@
-import { dbAll } from "@/lib/db";
+import { dbAll, getMeta, setMeta } from "@/lib/db";
+import { recordAudit } from "@/lib/audit";
+import { queue } from "@/lib/sync";
 
 export async function computeStats() {
-  const [participants, redemptions, tokens, audits] = await Promise.all([
+  const [participants, redemptions, tokens, audits, duplicateAttemptsResetAt] = await Promise.all([
     dbAll("participants"),
     dbAll("redemptions"),
     dbAll("tokens"),
     dbAll("audits"),
+    getMeta("duplicateAttemptsResetAt", ""),
   ]);
+  const resetTime = Date.parse(duplicateAttemptsResetAt || "");
 
   const counts = {
     total: participants.length,
@@ -52,10 +56,28 @@ export async function computeStats() {
   audits.forEach((a) => {
     const bucket = sessions[a.session];
     if (!bucket) return;
-    if (a.event_type === "SCAN_DUPLICATE") bucket.duplicates++;
+    if (a.event_type === "SCAN_DUPLICATE" && (!Number.isFinite(resetTime) || Date.parse(a.timestamp || "") > resetTime)) bucket.duplicates++;
     if (a.event_type === "SCAN_INVALID" || a.event_type === "SCAN_REVOKED") bucket.invalid++;
     if (a.event_type === "SCAN_INELIGIBLE") bucket.ineligible++;
   });
 
-  return { counts, sessions, participants, redemptions, tokens, audits };
+  return { counts, sessions, participants, redemptions, tokens, audits, duplicateAttemptsResetAt };
+}
+
+export async function resetDuplicateAttempts(actor = "") {
+  const resetAt = new Date().toISOString();
+  await setMeta("duplicateAttemptsResetAt", resetAt);
+  await queue("setting", {
+    key: "duplicate_attempts_reset_at",
+    value: resetAt,
+    updated_by: actor,
+  });
+  await recordAudit({
+    event_type: "DUPLICATE_ATTEMPTS_RESET",
+    actor,
+    outcome: "SUCCESS",
+    timestamp: resetAt,
+    detail: "Global duplicate scan counters reset. Historical audit events retained.",
+  });
+  return resetAt;
 }
