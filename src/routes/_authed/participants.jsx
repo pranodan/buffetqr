@@ -507,14 +507,14 @@ function ParticipantsPage() {
           ) : null}
         </div>
 
-        Show more ({filtered.length - limit} left)
-          <button
-            onClick={() => setLimit((l) => l + 40)}
-            className="mt-3 w-full rounded-xl border border-border bg-card py-2.5 text-xs font-medium"
-          >
-            Show more ({filtered.length - limit} left)
-          </button>
-        ) : null}
+        {sortedFiltered.length > limit ? (
+            <button
+              onClick={() => setLimit((l) => l + 40)}
+              className="mt-3 w-full rounded-xl border border-border bg-card py-2.5 text-xs font-medium"
+            >
+              Show more ({sortedFiltered.length - limit} left)
+            </button>
+          ) : null}
       </div>
 
       <Sheet open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
