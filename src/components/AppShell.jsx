@@ -22,7 +22,6 @@ import { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import PwaSetup from "@/components/PwaSetup";
 import { useSyncStatus } from "@/hooks/useSyncStatus";
 import { runSync } from "@/lib/sync";
 
@@ -59,7 +58,6 @@ export default function AppShell({ children, role = "admin", conferenceName = "C
 
   return (
     <div className="min-h-screen bg-background">
-      <PwaSetup />
       <div className="mx-auto flex w-full max-w-6xl">
         <aside className="no-print sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-border/70 bg-card/60 px-3 py-5 lg:flex">
           <Link to="/" className="mb-6 flex items-center gap-2.5 px-2">

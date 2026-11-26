@@ -1,25 +1,48 @@
 {
-  "name": "Buffet Access · Conference QR",
-  "short_name": "Buffet Access",
-  "description": "Offline-first QR check-in for conference buffet service.",
+  "id": "/",
+  "name": "BuffetQR · Conference Buffet Verification",
+  "short_name": "BuffetQR",
+  "description": "Offline-first QR verification and buffet check-in for conference staff.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#FBF9F4",
   "theme_color": "#0F3A31",
+  "categories": ["business", "productivity"],
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open QR Scanner",
+      "short_name": "Scanner",
+      "url": "/scanner",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Spot Registration",
+      "short_name": "Register",
+      "url": "/spot",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }

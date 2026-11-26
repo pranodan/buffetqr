@@ -88,6 +88,10 @@ export function AuthProvider({ children }) {
         const { error: signOutError } = await getSupabaseClient().auth.signOut();
         if (signOutError) throw signOutError;
         queryClient.setQueryData(authQuery.queryKey, { user: null, error: null });
+        if ("serviceWorker" in navigator) {
+          const registration = await navigator.serviceWorker.getRegistration();
+          registration?.active?.postMessage({ type: "PURGE_CACHED_PAGES" });
+        }
         window.location.assign("/login");
       },
       navigateToLogin: () => {
@@ -98,10 +102,4 @@ export function AuthProvider({ children }) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within <AuthProvider>");
-  return ctx;
 }
