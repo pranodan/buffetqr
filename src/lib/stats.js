@@ -39,11 +39,13 @@ export async function computeStats() {
   const sessions = {
     day1: { eligible: 0, redeemed: 0, manual: 0, duplicates: 0, invalid: 0, ineligible: 0 },
     day2: { eligible: 0, redeemed: 0, manual: 0, duplicates: 0, invalid: 0, ineligible: 0 },
+    dinner: { eligible: 0, redeemed: 0, manual: 0, duplicates: 0, invalid: 0, ineligible: 0 },
   };
 
   participants.forEach((p) => {
     if (p.day1_eligible) sessions.day1.eligible++;
     if (p.day2_eligible) sessions.day2.eligible++;
+    if (p.dinner_eligible) sessions.dinner.eligible++;
   });
 
   redemptions.forEach((r) => {
