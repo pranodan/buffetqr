@@ -405,7 +405,7 @@ function RegisterPage() {
             </div>
 
             <p className="px-1 text-[11px] leading-relaxed text-muted-foreground">
-              Day 1 and Day 2 eligibility default to yes. The super admin can change eligibility for anyone.
+              Eligibility defaults to all three sessions. For dinner-only guests, uncheck Day 1 and Day 2. This screen assigns the scanned preprinted reserve QR; it does not generate a new QR.
             </p>
           </form>
         )}
