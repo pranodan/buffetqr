@@ -158,7 +158,7 @@ export async function resolveScan(rawToken, session, { actor } = {}) {
     return {
       code: "NOT_ELIGIBLE",
       participant,
-      message: `Not eligible for ${session === "day2" ? "Day 2" : "Day 1"}.`,
+      message: `Not eligible for ${session === "dinner" ? "Dinner" : session === "day2" ? "Day 2" : "Day 1"}.`,
     };
   }
 
