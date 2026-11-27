@@ -106,6 +106,7 @@ async function pushOne(item) {
         qr_token: p.qr_token,
         day1_eligible: !!p.day1_eligible,
         day2_eligible: !!p.day2_eligible,
+        dinner_eligible: p.dinner_eligible !== false,
         registration_source: p.registration_source || "PRE_REGISTERED",
         registration_timestamp: p.registration_timestamp || new Date().toISOString(),
         registered_by: p.registered_by || "",
@@ -236,14 +237,19 @@ function mapCloudParticipant(c) {
     qr_token: c.qr_token,
     day1_eligible: !!c.day1_eligible,
     day2_eligible: !!c.day2_eligible,
+    dinner_eligible: c.dinner_eligible !== false,
     day1_redeemed: !!c.day1_redeemed,
     day2_redeemed: !!c.day2_redeemed,
+    dinner_redeemed: !!c.dinner_redeemed,
     day1_redeemed_at: c.day1_redeemed_at || "",
     day2_redeemed_at: c.day2_redeemed_at || "",
+    dinner_redeemed_at: c.dinner_redeemed_at || "",
     day1_scan_reset_at: c.day1_scan_reset_at || "",
     day2_scan_reset_at: c.day2_scan_reset_at || "",
+    dinner_scan_reset_at: c.dinner_scan_reset_at || "",
     day1_scan_generation: c.day1_scan_generation || "",
     day2_scan_generation: c.day2_scan_generation || "",
+    dinner_scan_generation: c.dinner_scan_generation || "",
     registration_source: c.registration_source || "PRE_REGISTERED",
     registration_timestamp: c.registration_timestamp || c.created_at || "",
     registered_by: c.registered_by || "",
@@ -311,6 +317,7 @@ async function pullAll() {
     merged.cloud_id = c.participant_id;
     const day1Key = `${c.participant_id}::day1`;
     const day2Key = `${c.participant_id}::day2`;
+    const dinnerKey = `${c.participant_id}::dinner`;
     merged.day1_redeemed = pendingRedemptionResets.has(day1Key)
       ? false
       : pendingRedemptions.has(day1Key)
@@ -321,6 +328,11 @@ async function pullAll() {
       : pendingRedemptions.has(day2Key)
         ? !!local.day2_redeemed
         : !!remote.day2_redeemed;
+    merged.dinner_redeemed = pendingRedemptionResets.has(dinnerKey)
+      ? false
+      : pendingRedemptions.has(dinnerKey)
+        ? !!local.dinner_redeemed
+        : !!remote.dinner_redeemed;
     merged.day1_redeemed_at = pendingRedemptionResets.has(day1Key)
       ? ""
       : pendingRedemptions.has(day1Key)
@@ -331,18 +343,29 @@ async function pullAll() {
       : pendingRedemptions.has(day2Key)
         ? local.day2_redeemed_at || ""
         : remote.day2_redeemed_at || "";
+    merged.dinner_redeemed_at = pendingRedemptionResets.has(dinnerKey)
+      ? ""
+      : pendingRedemptions.has(dinnerKey)
+        ? local.dinner_redeemed_at || ""
+        : remote.dinner_redeemed_at || "";
     merged.day1_scan_generation = pendingRedemptionResets.has(day1Key)
       ? local.day1_scan_generation || ""
       : remote.day1_scan_generation;
     merged.day2_scan_generation = pendingRedemptionResets.has(day2Key)
       ? local.day2_scan_generation || ""
       : remote.day2_scan_generation;
+    merged.dinner_scan_generation = pendingRedemptionResets.has(dinnerKey)
+      ? local.dinner_scan_generation || ""
+      : remote.dinner_scan_generation;
     merged.day1_scan_reset_at = pendingRedemptionResets.has(day1Key)
       ? local.day1_scan_reset_at || ""
       : remote.day1_scan_reset_at;
     merged.day2_scan_reset_at = pendingRedemptionResets.has(day2Key)
       ? local.day2_scan_reset_at || ""
       : remote.day2_scan_reset_at;
+    merged.dinner_scan_reset_at = pendingRedemptionResets.has(dinnerKey)
+      ? local.dinner_scan_reset_at || ""
+      : remote.dinner_scan_reset_at;
     merged.qr_token = local.qr_token || remote.qr_token;
     if (local.token_status === "REVOKED" || remote.token_status === "REVOKED") {
       merged.token_status = "REVOKED";
