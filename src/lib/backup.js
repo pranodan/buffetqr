@@ -46,8 +46,15 @@ export async function restoreBackup(payload) {
     if (!p?.participant_id || !p?.qr_token) continue;
     const local = await dbGet("participants", p.participant_id);
     if (!local) {
-      await dbPut("participants", { ...p, sync_state: "PENDING" });
-      await queue("participant", p);
+      const restored = {
+        ...p,
+        dinner_eligible: p.dinner_eligible !== false,
+        dinner_redeemed: !!p.dinner_redeemed,
+        dinner_redeemed_at: p.dinner_redeemed_at || "",
+        sync_state: "PENDING",
+      };
+      await dbPut("participants", restored);
+      await queue("participant", restored);
       added++;
     } else if (new Date(p.last_modified || 0) > new Date(local.last_modified || 0)) {
       const next = {
