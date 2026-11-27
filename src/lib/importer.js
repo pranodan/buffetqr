@@ -143,7 +143,7 @@ export async function applyImport(rows, actor) {
 export function importTemplate() {
   return [
     "participant_id,full_name,category,institution,day1_eligible,day2_eligible,dinner_eligible,designation,email,phone",
-    "NMC-001,Dr. Aashish Shrestha,Delegate,Teaching Hospital,true,true,Consultant,aashish@example.com,9800000001",
-    "NMC-002,Dr. Bina Karki,Speaker,Patan Academy,true,false,Professor,bina@example.com,9800000002",
+    "NMC-001,Dr. Aashish Shrestha,Delegate,Teaching Hospital,true,true,true,Consultant,aashish@example.com,9800000001",
+    "NMC-002,Dr. Bina Karki,Speaker,Patan Academy,true,false,true,Professor,bina@example.com,9800000002",
   ].join("\r\n");
 }
