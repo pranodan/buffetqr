@@ -2,7 +2,7 @@
    an in-memory store is used automatically if the browser blocks IndexedDB. */
 
 const DB_NAME = "buffet_access_supabase_db";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export const STORE_DEFS = {
   participants: { key: "participant_id" },
@@ -46,6 +46,25 @@ function openDb() {
             db.createObjectStore(name, { keyPath: def.key, autoIncrement: !!def.autoIncrement });
           }
         });
+        // Add Dinner fields to existing local participant records without changing QR tokens.
+        if (req.oldVersion < 2 && db.objectStoreNames.contains("participants")) {
+          const participants = req.transaction.objectStore("participants");
+          const cursorRequest = participants.openCursor();
+          cursorRequest.onsuccess = () => {
+            const cursor = cursorRequest.result;
+            if (!cursor) return;
+            const participant = cursor.value;
+            cursor.update({
+              ...participant,
+              dinner_eligible: participant.dinner_eligible !== false,
+              dinner_redeemed: !!participant.dinner_redeemed,
+              dinner_redeemed_at: participant.dinner_redeemed_at || "",
+              dinner_scan_reset_at: participant.dinner_scan_reset_at || "",
+              dinner_scan_generation: participant.dinner_scan_generation || "",
+            });
+            cursor.continue();
+          };
+        }
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error || new Error("idb-open-failed"));
