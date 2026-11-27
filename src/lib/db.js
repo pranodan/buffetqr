@@ -39,7 +39,7 @@ function openDb() {
   if (!dbPromise) {
     dbPromise = new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, DB_VERSION);
-      req.onupgradeneeded = () => {
+      req.onupgradeneeded = (event) => {
         const db = req.result;
         Object.entries(STORE_DEFS).forEach(([name, def]) => {
           if (!db.objectStoreNames.contains(name)) {
@@ -47,7 +47,7 @@ function openDb() {
           }
         });
         // Add Dinner fields to existing local participant records without changing QR tokens.
-        if (req.oldVersion < 2 && db.objectStoreNames.contains("participants")) {
+        if (event.oldVersion < 2 && db.objectStoreNames.contains("participants")) {
           const participants = req.transaction.objectStore("participants");
           const cursorRequest = participants.openCursor();
           cursorRequest.onsuccess = () => {
