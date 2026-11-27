@@ -4,7 +4,7 @@ import { newTransactionId, isWellFormedToken } from "@/lib/tokens";
 import { queue } from "@/lib/sync";
 import { makeAuditEvent, recordAudit } from "@/lib/audit";
 
-export const SESSIONS = ["day1", "day2"];
+export const SESSIONS = ["day1", "day2", "dinner"];
 
 /* Commits a buffet entry for one participant and one session.
    The duplicate check and the write happen inside a single local transaction,
@@ -18,7 +18,7 @@ async function commitEntry({ participant, session, actor, type, reason }) {
     const fresh = await tx.get("participants", participant.participant_id);
     if (!fresh) return { status: "INVALID" };
     if (fresh.token_status !== "ACTIVE") return { status: "REVOKED", participant: fresh };
-    const eligible = session === "day2" ? fresh.day2_eligible : fresh.day1_eligible;
+    const eligible = fresh[`${session}_eligible`];
     if (!eligible) return { status: "NOT_ELIGIBLE", participant: fresh };
     const existing = await tx.get("redemptions", dedupeKey);
     if (existing) return { status: "DUPLICATE", participant: fresh, existing };
@@ -145,7 +145,7 @@ export async function resolveScan(rawToken, session, { actor } = {}) {
     return { code: "REVOKED", participant, message: "This pass was revoked or replaced." };
   }
 
-  const eligible = session === "day2" ? participant.day2_eligible : participant.day1_eligible;
+  const eligible = participant[`${session}_eligible`];
   if (!eligible) {
     await recordAudit({
       event_type: "SCAN_INELIGIBLE",
