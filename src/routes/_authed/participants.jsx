@@ -24,6 +24,7 @@ const FILTERS = [
   { id: "all", label: "All" },
   { id: "day1", label: "Day 1 pending" },
   { id: "day2", label: "Day 2 pending" },
+  { id: "dinner", label: "Dinner pending" },
   { id: "spot", label: "Spot" },
   { id: "revoked", label: "Revoked" },
 ];
@@ -54,6 +55,7 @@ function ParticipantsPage() {
     phone: "",
     day1_eligible: true,
     day2_eligible: true,
+    dinner_eligible: true,
   });
 
   const [adding, setAdding] = useState(false);
@@ -81,6 +83,7 @@ function ParticipantsPage() {
       }
       if (filter === "day1") return p.day1_eligible && !p.day1_redeemed && p.token_status === "ACTIVE";
       if (filter === "day2") return p.day2_eligible && !p.day2_redeemed && p.token_status === "ACTIVE";
+      if (filter === "dinner") return p.dinner_eligible && !p.dinner_redeemed && p.token_status === "ACTIVE";
       if (filter === "spot") return p.registration_source === "SPOT_REGISTERED";
       if (filter === "revoked") return p.token_status === "REVOKED";
       return true;
@@ -88,11 +91,9 @@ function ParticipantsPage() {
   }, [list, query, filter]);
 
   const sortedFiltered = useMemo(() => {
-  const redeemedKey =
-    sortDay === "day1" ? "day1_redeemed" : "day2_redeemed";
+  const redeemedKey = `${sortDay}_redeemed`;
 
-  const eligibleKey =
-    sortDay === "day1" ? "day1_eligible" : "day2_eligible";
+  const eligibleKey = `${sortDay}_eligible`;
 
   return [...filtered].sort((a, b) => {
     const getPriority = (p) => {
@@ -166,6 +167,7 @@ function ParticipantsPage() {
         phone: "",
         day1_eligible: true,
         day2_eligible: true,
+        dinner_eligible: true,
       });
     } catch (err) {
       setActionError(String(err?.message || err));
@@ -412,6 +414,10 @@ function ParticipantsPage() {
                     className="h-4 w-4 accent-primary"
                   />
                 </label>
+                <label className="flex items-center justify-between text-xs">
+                  <span>Dinner</span>
+                  <input type="checkbox" checked={newParticipant.dinner_eligible} onChange={(e) => setNewParticipant({ ...newParticipant, dinner_eligible: e.target.checked })} className="h-4 w-4 accent-primary" />
+                </label>
               </div>
             </div>
 
@@ -463,6 +469,7 @@ function ParticipantsPage() {
           >
             <option value="day1">Day 1 (D1)</option>
             <option value="day2">Day 2 (D2)</option>
+            <option value="dinner">Dinner</option>
           </select>
         </div>
 
@@ -499,6 +506,7 @@ function ParticipantsPage() {
               <div className="flex shrink-0 items-center gap-1.5">
                 <DayPip label="D1" on={p.day1_eligible} done={p.day1_redeemed} />
                 <DayPip label="D2" on={p.day2_eligible} done={p.day2_redeemed} />
+                <DayPip label="DIN" on={p.dinner_eligible} done={p.dinner_redeemed} />
               </div>
             </button>
           ))}
@@ -594,6 +602,18 @@ function ParticipantsPage() {
                   onResetScan={role === "admin" ? () => {
                     if (!window.confirm(`Mark ${selected.full_name.toUpperCase()} as not scanned for Day 2?`)) return;
                     act(() => resetParticipantScan(selected.participant_id, "day2", actor));
+                  } : null}
+                />
+                <EligibilityRow
+                  label="Dinner"
+                  eligible={selected.dinner_eligible}
+                  redeemed={selected.dinner_redeemed}
+                  redeemedAt={selected.dinner_redeemed_at}
+                  disabled={role !== "admin" || busy}
+                  onToggle={() => act(() => updateParticipant(selected.participant_id, { dinner_eligible: !selected.dinner_eligible }, actor))}
+                  onResetScan={role === "admin" ? () => {
+                    if (!window.confirm(`Mark ${selected.full_name.toUpperCase()} as not scanned for Dinner?`)) return;
+                    act(() => resetParticipantScan(selected.participant_id, "dinner", actor));
                   } : null}
                 />
               </div>
