@@ -46,7 +46,7 @@ export async function savePrefs(patch) {
 }
 
 export function sessionLabel(conference, session) {
-  if (!conference) return session === "day2" ? "Day 2" : "Day 1";
+  if (!conference) return session === "dinner" ? "Dinner" : session === "day2" ? "Day 2" : "Day 1";
   if (session === "dinner") return conference.dinner_name || "Dinner";
   return session === "day2" ? conference.day2_name : conference.day1_name;
 }
