@@ -67,10 +67,13 @@ export async function createParticipant(input, { actor, source = "SPOT_REGISTERE
     qr_token: reserveToken?.token || secureToken(),
     day1_eligible: input.day1_eligible !== false,
     day2_eligible: input.day2_eligible !== false,
+    dinner_eligible: input.dinner_eligible !== false,
     day1_redeemed: false,
     day2_redeemed: false,
+    dinner_redeemed: false,
     day1_redeemed_at: "",
     day2_redeemed_at: "",
+    dinner_redeemed_at: "",
     registration_source: source,
     registration_timestamp: now,
     registered_by: actor || "",
@@ -185,7 +188,7 @@ export async function revokeToken(id, actor, reason) {
 }
 
 export async function resetParticipantScan(id, session, actor) {
-  if (!["day1", "day2"].includes(session)) throw new Error("Invalid buffet session");
+  if (!["day1", "day2", "dinner"].includes(session)) throw new Error("Invalid buffet session");
   const timestamp = new Date().toISOString();
   const generation = crypto.randomUUID();
   const dedupeKey = `${id}::${session}`;
@@ -244,6 +247,6 @@ export function participantStatusLabel(participant, session) {
   if (!participant) return "Unknown";
   if (participant.token_status === "REVOKED") return "Pass revoked";
   if (participant[`${session}_redeemed`]) return "Already redeemed";
-  const eligible = session === "day2" ? participant.day2_eligible : participant.day1_eligible;
+  const eligible = participant[`${session}_eligible`];
   return eligible ? "Eligible" : "Not eligible";
 }
