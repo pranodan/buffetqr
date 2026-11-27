@@ -240,7 +240,7 @@ function ParticipantsPage() {
               </p>
             )}
                 <p className="mt-1 text-[11px] text-muted-foreground">
-                  A new QR pass will be generated automatically.
+                  This form generates a new QR. For guests who must use an already printed pass, use Spot registration and assign an unused preprinted reserve pass instead.
                 </p>
               </div>
 
