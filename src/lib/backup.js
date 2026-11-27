@@ -55,6 +55,7 @@ export async function restoreBackup(payload) {
         ...p,
         day1_redeemed: !!(local.day1_redeemed || p.day1_redeemed),
         day2_redeemed: !!(local.day2_redeemed || p.day2_redeemed),
+        dinner_redeemed: !!(local.dinner_redeemed || p.dinner_redeemed),
         token_status: local.token_status === "REVOKED" ? "REVOKED" : p.token_status,
         sync_state: "PENDING",
       };
