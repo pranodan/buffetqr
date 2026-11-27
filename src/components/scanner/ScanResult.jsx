@@ -113,5 +113,6 @@ export default function ScanResult({
 
 function buffetSessionLabel(sessionName) {
   const label = String(sessionName || "").trim();
-  return /\bbuffet\b/i.test(label) ? label.replace(/\bbuffet\b/i, "Buffet") : `${label} Buffet`;
+  if (/\bbuffet\b/i.test(label)) return label.replace(/\bbuffet\b/i, "Buffet");
+  return /^day\s*[12]$/i.test(label) ? `${label} Buffet` : label;
 }
