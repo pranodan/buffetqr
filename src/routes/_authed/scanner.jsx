@@ -49,7 +49,7 @@ function ScannerPage() {
 
   const refreshCounts = async () => {
     const [participants, redemptions] = await Promise.all([allParticipants(), allRedemptions()]);
-    const eligible = participants.filter((p) => (session === "day2" ? p.day2_eligible : p.day1_eligible)).length;
+    const eligible = participants.filter((p) => p[`${session}_eligible`]).length;
     const redeemed = redemptions.filter((r) => r.session === session).length;
     setCounts({ eligible, redeemed });
   };
@@ -138,8 +138,8 @@ function ScannerPage() {
         </div>
 
         {role === "admin" ? (
-          <div className="grid grid-cols-2 gap-2">
-            {["day1", "day2"].map((s) => (
+          <div className="grid grid-cols-3 gap-2">
+            {["day1", "day2", "dinner"].map((s) => (
               <button
                 key={s}
                 onClick={() => changeSession(s)}
