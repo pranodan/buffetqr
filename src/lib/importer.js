@@ -5,7 +5,7 @@ import { queue, refreshPending, runSync } from "@/lib/sync";
 import { recordAudit } from "@/lib/audit";
 import { parseBoolean } from "@/lib/csv";
 
-export const REQUIRED_HEADERS = ["participant_id", "full_name", "category", "day1_eligible", "day2_eligible", "dinner_eligible"];
+export const REQUIRED_HEADERS = ["participant_id", "full_name", "category", "day1_eligible", "day2_eligible"];
 
 const BOOLEAN_VALUES = ["1", "0", "true", "false", "yes", "no", "y", "n", ""];
 
