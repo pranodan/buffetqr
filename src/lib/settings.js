@@ -5,10 +5,13 @@ export const DEFAULT_CONFERENCE = {
   name: "Nepal Medical Conference 2026",
   day1_name: "Day 1 buffet",
   day2_name: "Day 2 buffet",
+  dinner_name: "Dinner",
   day1_date: "2026-11-27",
   day2_date: "2026-11-28",
+  dinner_date: "2026-11-28",
   day1_enabled: true,
   day2_enabled: true,
+  dinner_enabled: true,
   active_session: "day1",
   auto_scan: true,
 };
@@ -44,5 +47,6 @@ export async function savePrefs(patch) {
 
 export function sessionLabel(conference, session) {
   if (!conference) return session === "day2" ? "Day 2" : "Day 1";
+  if (session === "dinner") return conference.dinner_name || "Dinner";
   return session === "day2" ? conference.day2_name : conference.day1_name;
 }
