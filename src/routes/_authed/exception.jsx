@@ -147,7 +147,7 @@ function ExceptionPage() {
               <div className="mt-3 rounded-xl bg-muted/60 p-3">
                 <p className="font-heading text-sm font-semibold uppercase">{selected.full_name}</p>
                 <p className="mono text-[11px] text-muted-foreground">{selected.participant_id}</p>
-                <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+                <div className="mt-2 grid grid-cols-3 gap-2 text-[11px]">
                   <p>
                     Day 1:{" "}
                     <span className={selected.day1_eligible ? "text-primary" : "text-muted-foreground"}>
@@ -162,6 +162,13 @@ function ExceptionPage() {
                     </span>
                     {selected.day2_redeemed ? " · redeemed" : ""}
                   </p>
+                  <p>
+                    Dinner:{" "}
+                    <span className={selected.dinner_eligible ? "text-primary" : "text-muted-foreground"}>
+                      {selected.dinner_eligible ? "eligible" : "not eligible"}
+                    </span>
+                    {selected.dinner_redeemed ? " · redeemed" : ""}
+                  </p>
                 </div>
                 <p className="mt-2 text-[11px] text-muted-foreground">
                   Confirm the printed name card matches before continuing.
@@ -174,8 +181,8 @@ function ExceptionPage() {
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               2. Session and reason
             </p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              {["day1", "day2"].map((s) => (
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {["day1", "day2", "dinner"].map((s) => (
                 <button
                   key={s}
                   type="button"
