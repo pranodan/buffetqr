@@ -5,7 +5,7 @@ import { queue, refreshPending, runSync } from "@/lib/sync";
 import { recordAudit } from "@/lib/audit";
 import { parseBoolean } from "@/lib/csv";
 
-export const REQUIRED_HEADERS = ["participant_id", "full_name", "category", "day1_eligible", "day2_eligible"];
+export const REQUIRED_HEADERS = ["participant_id", "full_name", "category", "day1_eligible", "day2_eligible", "dinner_eligible"];
 
 const BOOLEAN_VALUES = ["1", "0", "true", "false", "yes", "no", "y", "n", ""];
 
@@ -29,8 +29,10 @@ export function validateImport(records, existingList) {
 
     const d1 = String(raw.day1_eligible ?? "").trim().toLowerCase();
     const d2 = String(raw.day2_eligible ?? "").trim().toLowerCase();
+    const dinner = String(raw.dinner_eligible ?? "").trim().toLowerCase();
     if (!BOOLEAN_VALUES.includes(d1)) warnings.push("day1_eligible not recognised, assumed eligible");
     if (!BOOLEAN_VALUES.includes(d2)) warnings.push("day2_eligible not recognised, assumed eligible");
+    if (!BOOLEAN_VALUES.includes(dinner)) warnings.push("dinner_eligible not recognised, assumed eligible");
 
     const normalized = normalizeName(name);
     if (normalized && seenNames.has(normalized) && seenNames.get(normalized) !== id) {
@@ -51,6 +53,7 @@ export function validateImport(records, existingList) {
       phone: String(raw.phone || "").trim(),
       day1_eligible: parseBoolean(raw.day1_eligible, true),
       day2_eligible: parseBoolean(raw.day2_eligible, true),
+      dinner_eligible: parseBoolean(raw.dinner_eligible, true),
       existing,
       errors,
       warnings,
@@ -86,6 +89,7 @@ export async function applyImport(rows, actor) {
         phone: row.phone || row.existing.phone,
         day1_eligible: row.day1_eligible,
         day2_eligible: row.day2_eligible,
+        dinner_eligible: row.dinner_eligible,
         last_modified: now,
         sync_state: "PENDING",
       };
@@ -104,10 +108,13 @@ export async function applyImport(rows, actor) {
         qr_token: secureToken(),
         day1_eligible: row.day1_eligible,
         day2_eligible: row.day2_eligible,
+        dinner_eligible: row.dinner_eligible,
         day1_redeemed: false,
         day2_redeemed: false,
+        dinner_redeemed: false,
         day1_redeemed_at: "",
         day2_redeemed_at: "",
+        dinner_redeemed_at: "",
         registration_source: "PRE_REGISTERED",
         registration_timestamp: now,
         registered_by: actor || "",
@@ -135,7 +142,7 @@ export async function applyImport(rows, actor) {
 
 export function importTemplate() {
   return [
-    "participant_id,full_name,category,institution,day1_eligible,day2_eligible,designation,email,phone",
+    "participant_id,full_name,category,institution,day1_eligible,day2_eligible,dinner_eligible,designation,email,phone",
     "NMC-001,Dr. Aashish Shrestha,Delegate,Teaching Hospital,true,true,Consultant,aashish@example.com,9800000001",
     "NMC-002,Dr. Bina Karki,Speaker,Patan Academy,true,false,Professor,bina@example.com,9800000002",
   ].join("\r\n");
