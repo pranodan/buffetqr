@@ -45,8 +45,10 @@ function ReportsPage() {
       phone: p.phone,
       day1_eligible: p.day1_eligible,
       day2_eligible: p.day2_eligible,
+      dinner_eligible: p.dinner_eligible,
       day1_redeemed: p.day1_redeemed,
       day2_redeemed: p.day2_redeemed,
+      dinner_redeemed: p.dinner_redeemed,
       registration_source: p.registration_source,
       registration_timestamp: p.registration_timestamp,
       token_status: p.token_status,
@@ -171,6 +173,7 @@ function ReportsPage() {
     sessions: {
       day1: { eligible: 0, redeemed: 0, manual: 0, duplicates: 0, invalid: 0, ineligible: 0 },
       day2: { eligible: 0, redeemed: 0, manual: 0, duplicates: 0, invalid: 0, ineligible: 0 },
+      dinner: { eligible: 0, redeemed: 0, manual: 0, duplicates: 0, invalid: 0, ineligible: 0 },
     },
   };
 
@@ -184,12 +187,12 @@ function ReportsPage() {
         />
 
         <div className="grid gap-3 sm:grid-cols-2">
-          {["day1", "day2"].map((id) => {
+          {["day1", "day2", "dinner"].map((id) => {
             const b = s.sessions[id];
             return (
               <div key={id} className="rounded-2xl border border-border/70 bg-card p-4">
                 <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                  {id === "day1" ? conference.day1_name : conference.day2_name}
+                  {id === "day1" ? conference.day1_name : id === "day2" ? conference.day2_name : conference.dinner_name || "Dinner"}
                 </p>
                 <p className="num mt-2 font-heading text-3xl font-semibold">
                   {b.redeemed}
