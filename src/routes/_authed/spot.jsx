@@ -48,6 +48,9 @@ function RegisterPage() {
     designation: "",
     email: "",
     phone: "",
+    day1_eligible: true,
+    day2_eligible: true,
+    dinner_eligible: true,
   });
   const [matches, setMatches] = useState([]);
   const [confirmed, setConfirmed] = useState(false);
@@ -94,7 +97,7 @@ function RegisterPage() {
     setQr(null);
     setScannedToken(null);
     setManualToken("");
-    setForm({ full_name: "", category: "Participant", institution: "", designation: "", email: "", phone: "" });
+    setForm({ full_name: "", category: "Participant", institution: "", designation: "", email: "", phone: "", day1_eligible: true, day2_eligible: true, dinner_eligible: true });
     setMatches([]);
     setConfirmed(false);
     setError("");
@@ -356,6 +359,27 @@ function RegisterPage() {
                   </Field>
                 </div>
               </details>
+
+              <div className="mt-4 rounded-xl border border-border/70 p-3">
+                <p className="mb-3 text-xs font-semibold">Entry eligibility</p>
+                <div className="space-y-3">
+                  {[
+                    ["day1_eligible", "Day 1 buffet"],
+                    ["day2_eligible", "Day 2 buffet"],
+                    ["dinner_eligible", "Dinner"],
+                  ].map(([key, label]) => (
+                    <label key={key} className="flex items-center justify-between text-xs">
+                      <span>{label}</span>
+                      <input
+                        type="checkbox"
+                        checked={form[key]}
+                        onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.checked }))}
+                        className="h-4 w-4 accent-primary"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
 
               {error ? (
                 <p role="alert" className="mt-3 rounded-xl bg-destructive/8 px-3 py-2 text-xs text-destructive">{error}</p>
